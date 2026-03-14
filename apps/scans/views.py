@@ -68,7 +68,10 @@ class ScanCreateView(LoginRequiredMixin, CreateView):
             run_scan_task.delay(self.object.id)
             messages.success(self.request, f"Scan '{self.object.name}' has been queued.")
         except Exception as e:
-            messages.warning(self.request, f"Scan '{self.object.name}' was created but could not be queued. Background worker issue.")
+            # Fallback for local development without Redis/Celery deployed
+            import threading
+            threading.Thread(target=run_scan_task, args=(self.object.id,)).start()
+            messages.info(self.request, f"Scan '{self.object.name}' triggered via local background thread.")
         return response
 
 class ScanDeleteView(LoginRequiredMixin, DeleteView):
@@ -100,7 +103,9 @@ class ScanRunView(LoginRequiredMixin, View):
                 run_scan_task.delay(scan.id)
                 messages.info(request, f"Scan '{scan.name}' has been queued.")
             except Exception as e:
-                messages.error(request, f"Failed to queue scan '{scan.name}'. Background worker issue.")
+                import threading
+                threading.Thread(target=run_scan_task, args=(scan.id,)).start()
+                messages.info(request, f"Scan '{scan.name}' started via background thread.")
         else:
             messages.error(request, "Scan is already running or completed.")
             
@@ -282,7 +287,10 @@ class ReportBuilderView(LoginRequiredMixin, View):
                 generate_and_email_report.delay(report.id, email_to if email_to else None)
                 messages.success(request, "Report is being generated securely in the background. Check the Reports page.")
             except Exception as e:
-                messages.warning(request, "Report request saved, but background worker is currently unavailable.")
+                import threading
+                from .tasks import generate_and_email_report
+                threading.Thread(target=generate_and_email_report, args=(report.id, email_to if email_to else None)).start()
+                messages.success(request, "Report is being generated in a local thread. Check the Reports page soon.")
             return redirect('scans:report_list')
 
 
@@ -350,7 +358,10 @@ class ExportOptionsView(LoginRequiredMixin, TemplateView):
             run_data_export.delay(export.id)
             messages.success(request, f"Data export ({export_format.upper()}) is queued for processing.")
         except Exception as e:
-            messages.warning(request, f"Data export ({export_format.upper()}) saved, but background worker is not available.")
+            import threading
+            from .tasks import run_data_export
+            threading.Thread(target=run_data_export, args=(export.id,)).start()
+            messages.success(request, f"Data export ({export_format.upper()}) is processing locally.")
         return redirect('scans:export_list')
 
 class DataExportListView(LoginRequiredMixin, ListView):
@@ -403,7 +414,9 @@ class OWASPScanCreateView(LoginRequiredMixin, CreateView):
             run_owasp_scan_task.delay(self.object.id)
             messages.success(self.request, "OWASP Top 10 Scan started successfully.")
         except Exception as e:
-            messages.warning(self.request, "OWASP scan target saved, but background worker is unavailable to start scan.")
+            import threading
+            threading.Thread(target=run_owasp_scan_task, args=(self.object.id,)).start()
+            messages.info(self.request, "OWASP scan triggered locally using background thread.")
         return response
 
 class OWASPScanDetailView(LoginRequiredMixin, DetailView):
