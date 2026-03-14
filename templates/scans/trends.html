@@ -6,16 +6,22 @@
 <style>
     .trend-card {
         border-radius: 12px;
-        border: none;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-        background: #fff;
+        border: 1px solid rgba(255,255,255,0.05);
+        background: var(--vt-surface);
         margin-bottom: 2rem;
+        color: #f3f4f6;
     }
     .chart-header {
         padding: 1.5rem 1.5rem 0;
         display: flex;
         justify-content: space-between;
         align-items: center;
+    }
+    .chart-header h6 {
+        color: var(--vt-accent);
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        letter-spacing: 1px;
     }
 </style>
 {% endblock %}
@@ -25,7 +31,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold text-dark mb-0">Performance Trends</h2>
-            <p class="text-muted small mb-0">Analyze security performance over time</p>
+            <p class="text-white-50 small mb-0">Analyze security performance over time</p>
         </div>
         <div>
             <a href="{% url 'scans:report_builder' %}" class="btn btn-primary rounded-pill px-4">
@@ -65,24 +71,36 @@
 {% block extra_js %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
+    const chartColors = {
+        primary: '#00ffcc',
+        success: '#1cc88a',
+        text: '#9ca3af',
+        grid: 'rgba(255, 255, 255, 0.05)'
+    };
+
+    Chart.defaults.color = chartColors.text;
+    Chart.defaults.borderColor = chartColors.grid;
+
     // MoM Chart
     new Chart(document.getElementById('momChart'), {
         type: 'line',
         data: {
             labels: {{ chart_mom_labels|safe }},
             datasets: [{
-                label: 'New Findings',
+                label: 'Findings Count',
                 data: {{ chart_mom_data|safe }},
-                borderColor: '#4e73df',
-                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                borderColor: chartColors.primary,
+                backgroundColor: 'rgba(0, 255, 204, 0.1)',
                 fill: true,
-                tension: 0.3
+                tension: 0.3,
+                pointRadius: 4,
+                pointBackgroundColor: chartColors.primary,
             }]
         },
         options: {
             maintainAspectRatio: false,
             scales: {
-                y: { beginAtZero: true, grid: { borderDash: [2] } },
+                y: { beginAtZero: true, grid: { color: chartColors.grid } },
                 x: { grid: { display: false } }
             }
         }
@@ -94,16 +112,22 @@
         data: {
             labels: {{ chart_ttr_labels|safe }},
             datasets: [{
-                label: 'Avg Hours',
+                label: 'Avg Remediation (Hours)',
                 data: {{ chart_ttr_data|safe }},
-                backgroundColor: '#1cc88a',
-                borderRadius: 5
+                backgroundColor: chartColors.success,
+                borderColor: chartColors.success,
+                borderWidth: 1,
+                borderRadius: 4
             }]
         },
         options: {
             maintainAspectRatio: false,
             scales: {
-                y: { beginAtZero: true, title: { display: true, text: 'Hours' } },
+                y: { 
+                    beginAtZero: true, 
+                    grid: { color: chartColors.grid },
+                    title: { display: true, text: 'Hours', color: chartColors.text } 
+                },
                 x: { grid: { display: false } }
             }
         }

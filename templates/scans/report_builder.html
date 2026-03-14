@@ -6,21 +6,21 @@
 <div class="container py-4">
     <div class="row justify-content-center">
         <div class="col-md-8">
-            <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-header bg-dark text-white p-4 rounded-top-4">
-                    <h4 class="fw-bold mb-0"><i class="fas fa-file-invoice me-2"></i>Report Builder</h4>
+            <div class="glass-panel overflow-hidden mb-4 mt-2 position-relative z-1">
+                <div class="border-bottom border-light border-opacity-10 bg-transparent p-4 position-relative z-1">
+                    <h4 class="fw-bold mb-0 text-info" style="text-shadow: 0 0 15px rgba(14, 165, 233, 0.4);"><i class="fas fa-file-invoice me-2"></i>Report Builder</h4>
                     <p class="text-white-50 small mb-0 mt-1">Configure and export your security findings report</p>
                 </div>
-                <div class="card-body p-4">
+                <div class="p-4 position-relative z-1">
                     <form method="post">
                         {% csrf_token %}
                         
                         <div class="mb-4">
-                            <label class="form-label fw-bold small text-uppercase">Report Scope</label>
+                            <label class="form-label fw-bold small text-uppercase text-white-50 tracking-widest mb-3">Report Scope</label>
                             <div class="row g-3">
                                 <div class="col-md-6">
-                                    <label class="form-label small text-muted">Filter by Target</label>
-                                    <select name="target" class="form-select">
+                                    <label class="form-label small text-white-50">Filter by Target</label>
+                                    <select name="target" class="form-select glass-input">
                                         <option value="">All Targets</option>
                                         {% for t in targets %}
                                         <option value="{{ t.id }}">{{ t.name }}</option>
@@ -28,8 +28,8 @@
                                     </select>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small text-muted">Filter by Severity</label>
-                                    <select name="severity" class="form-select">
+                                    <label class="form-label small text-white-50">Filter by Severity</label>
+                                    <select name="severity" class="form-select glass-input">
                                         <option value="">All Severities</option>
                                         {% for val, label in severity_choices %}
                                         <option value="{{ val }}">{{ label }}</option>
@@ -40,32 +40,53 @@
                         </div>
 
                         <div class="mb-4">
-                            <label class="form-label fw-bold small text-uppercase">Export Format</label>
+                            <label class="form-label fw-bold small text-uppercase text-white-50 tracking-widest mb-3">Export Format</label>
                             <div class="d-flex gap-3">
-                                <div class="form-check card border p-3 flex-fill text-center">
+                                <div class="flex-fill">
                                     <input class="form-check-input d-none" type="radio" name="format" id="fmtPdf" value="pdf" checked>
-                                    <label class="form-check-label stretched-link cursor-pointer" for="fmtPdf">
-                                        <i class="fas fa-file-pdf fa-2x text-danger mb-2"></i>
-                                        <div class="fw-bold">PDF Document</div>
-                                        <div class="small text-muted">Professional Layout</div>
+                                    <label class="form-check-label format-card p-4 text-center cursor-pointer w-100 h-100 d-block shadow-sm" for="fmtPdf">
+                                        <i class="fas fa-file-pdf fa-3x text-danger mb-3" style="filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.5));"></i>
+                                        <div class="fw-bold text-white mb-1">PDF Document</div>
+                                        <div class="small text-white-50">Professional Layout</div>
                                     </label>
                                 </div>
-                                <div class="form-check card border p-3 flex-fill text-center">
+                                <div class="flex-fill">
                                     <input class="form-check-input d-none" type="radio" name="format" id="fmtCsv" value="csv">
-                                    <label class="form-check-label stretched-link cursor-pointer" for="fmtCsv">
-                                        <i class="fas fa-file-csv fa-2x text-success mb-2"></i>
-                                        <div class="fw-bold">CSV Spreadsheet</div>
-                                        <div class="small text-muted">Raw Data Analysis</div>
+                                    <label class="form-check-label format-card p-4 text-center cursor-pointer w-100 h-100 d-block shadow-sm" for="fmtCsv">
+                                        <i class="fas fa-file-csv fa-3x text-success mb-3" style="filter: drop-shadow(0 0 10px rgba(34, 197, 94, 0.5));"></i>
+                                        <div class="fw-bold text-white mb-1">CSV Spreadsheet</div>
+                                        <div class="small text-white-50">Raw Data Analysis</div>
                                     </label>
                                 </div>
                             </div>
                         </div>
 
-                        <hr class="my-4">
+                        <div id="pdf-options">
+                            <div class="mb-4">
+                                <label class="form-label fw-bold small text-uppercase text-white-50 tracking-widest mb-2">PDF Report Type</label>
+                                <select name="report_type" class="form-select glass-input">
+                                    <option value="technical">Detailed Technical Report</option>
+                                    <option value="executive">Executive Summary (Management)</option>
+                                    <option value="compliance_pci">PCI-DSS Compliance Assessment</option>
+                                    <option value="compliance_iso">ISO 27001 Mapping</option>
+                                </select>
+                            </div>
+                            
+                            <div class="mb-4">
+                                <label class="form-label fw-bold small text-uppercase text-white-50 tracking-widest mb-2">Email Delivery (Optional)</label>
+                                <div class="input-group search-group shadow-sm">
+                                    <span class="input-group-text glass-input-addon" style="background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1); border-right: none;"><i class="fas fa-envelope text-white-50"></i></span>
+                                    <input type="email" name="email" class="form-control glass-input" placeholder="user@company.com">
+                                </div>
+                                <div class="form-text small text-white-50 opacity-75 mt-2">Enter an email address to have the PDF report sent to them automatically once generated.</div>
+                            </div>
+                        </div>
 
-                        <div class="d-grid">
-                            <button type="submit" class="btn btn-dark btn-lg rounded-pill p-3 fw-bold">
-                                <i class="fas fa-download me-2"></i>Generate & Download Report
+                        <hr class="my-4 border-light border-opacity-10">
+
+                        <div class="d-grid mt-2">
+                            <button type="submit" class="btn btn-info btn-lg rounded-pill p-3 fw-bold shadow-lg">
+                                <i class="fas fa-magic me-2"></i>Generate & Download Report
                             </button>
                         </div>
                     </form>
@@ -73,7 +94,7 @@
             </div>
 
             <div class="mt-4 text-center">
-                <p class="text-muted small">
+                <p class="text-white-50 small">
                     <i class="fas fa-info-circle me-1"></i> Reports include an executive summary, technical details, and vulnerability history.
                 </p>
             </div>
@@ -82,10 +103,75 @@
 </div>
 
 <style>
-    .cursor-pointer { cursor: pointer; }
-    .form-check-input:checked + .form-check-label {
-        background-color: #f8f9fa;
-        border-color: #2c3e50;
+    .glass-panel {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
+    .glass-panel::before {
+        content: '';
+        position: absolute;
+        top: -50px; left: -50px;
+        width: 150px; height: 150px;
+        background: rgba(14, 165, 233, 0.15); /* light blue accent */
+        filter: blur(50px);
+        z-index: 0;
+        pointer-events: none;
+    }
+    .glass-input {
+        background: rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        color: #f8fafc !important;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s;
+    }
+    .glass-input:focus {
+        background: rgba(0, 0, 0, 0.5) !important;
+        border-color: rgba(14, 165, 233, 0.5) !important;
+        box-shadow: 0 0 0 0.25rem rgba(14, 165, 233, 0.25) !important;
+    }
+    .glass-input::placeholder {
+        color: rgba(255, 255, 255, 0.4) !important;
+    }
+    .form-select.glass-input option {
+        color: #fff;
+        background: #0f172a;
+    }
+    .format-card {
+        background: rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        transition: all 0.3s ease;
+        border-radius: 12px;
+    }
+    .format-card:hover {
+        background: rgba(255, 255, 255, 0.05) !important;
+        border-color: rgba(255, 255, 255, 0.2) !important;
+    }
+    .form-check-input:checked + .format-card {
+        background: rgba(14, 165, 233, 0.1) !important;
+        border-color: rgba(14, 165, 233, 0.5) !important;
+        box-shadow: 0 0 15px rgba(14, 165, 233, 0.2);
+    }
+    .cursor-pointer { cursor: pointer; }
 </style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const radios = document.querySelectorAll('input[name="format"]');
+        const pdfOptions = document.getElementById('pdf-options');
+        
+        radios.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if(this.value === 'pdf') {
+                    pdfOptions.style.display = 'block';
+                } else {
+                    pdfOptions.style.display = 'none';
+                }
+            });
+        });
+    });
+</script>
 {% endblock %}

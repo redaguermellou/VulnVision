@@ -1,69 +1,408 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - VulnVision{% endblock %}
+{% block title %}VulnVision - Enterprise Cyber Security{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Full width content area */
+    .content-area {
+        padding: 0 !important;
+        margin-top: -1px; 
+    }
+
+    /* Landing Specific Styles for unauthenticated users */
+    .landing-wrapper {
+        position: relative;
+        overflow-x: hidden;
+        background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+    }
+
+    .hero-container {
+        padding: 140px 0 80px;
+        text-align: center;
+        max-width: 1000px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 10;
+    }
+
+    /* Floating background orbs */
+    .orb-1 { position: absolute; top: -100px; left: -100px; width: 500px; height: 500px; background: rgba(59, 130, 246, 0.15); filter: blur(120px); border-radius: 50%; z-index: 0; pointer-events: none;}
+    .orb-2 { position: absolute; top: 20%; right: -200px; width: 600px; height: 600px; background: rgba(139, 92, 246, 0.1); filter: blur(150px); border-radius: 50%; z-index: 0; pointer-events: none;}
+
+    .badge-glow {
+        display: inline-flex;
+        align-items: center;
+        padding: 8px 20px;
+        background: rgba(16, 185, 129, 0.1);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+        border-radius: 100px;
+        color: #10b981;
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-bottom: 30px;
+        box-shadow: 0 0 30px rgba(16, 185, 129, 0.15);
+        backdrop-filter: blur(5px);
+    }
+    .hero-h1 {
+        font-size: 4.8rem;
+        font-weight: 900;
+        line-height: 1.1;
+        letter-spacing: -2px;
+        margin-bottom: 30px;
+        background: linear-gradient(to right, #ffffff, #94a3b8);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    .hero-p {
+        font-size: 1.35rem;
+        color: #94a3b8;
+        line-height: 1.6;
+        margin-bottom: 50px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    /* Checklist */
+    .checklist-row {
+        display: flex;
+        justify-content: center;
+        gap: 32px;
+        margin-bottom: 50px;
+        flex-wrap: wrap;
+    }
+    .check-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-weight: 600;
+        font-size: 1rem;
+        color: #e2e8f0;
+    }
+    .check-item i {
+        color: #10b981;
+        background: rgba(16, 185, 129, 0.15);
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
+    }
+
+    /* Main Features Grid */
+    .grid-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 30px;
+        margin-top: 80px;
+        position: relative;
+        z-index: 10;
+    }
+    .glass-feature-card {
+        padding: 40px;
+        text-align: left;
+        border-radius: 24px;
+        background: rgba(15, 23, 42, 0.5);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+        overflow: hidden;
+    }
+    .glass-feature-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 3px;
+        background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+        opacity: 0; transition: opacity 0.3s ease;
+    }
+    .glass-feature-card:hover {
+        background: rgba(30, 41, 59, 0.7);
+        border-color: rgba(255, 255, 255, 0.1);
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+    }
+    .glass-feature-card:hover::before { opacity: 1; }
+    
+    .card-icon {
+        width: 60px;
+        height: 60px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.05));
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #60a5fa;
+        font-size: 1.6rem;
+        margin-bottom: 24px;
+        box-shadow: inset 0 2px 4px rgba(255,255,255,0.1);
+    }
+    .glass-feature-card h4 { font-size: 1.35rem; font-weight: 800; margin-bottom: 16px; color: #fff; }
+    .glass-feature-card p { color: #94a3b8; font-size: 1rem; margin-bottom: 0; line-height: 1.7; }
+
+    /* Dashboard Preview */
+    .preview-wrapper {
+        position: relative;
+        margin-top: 100px;
+        padding: 4px;
+        background: linear-gradient(135deg, rgba(255,255,255,0.1), rgba(255,255,255,0.0));
+        border-radius: 36px;
+        z-index: 10;
+        box-shadow: 0 30px 60px -10px rgba(0,0,0,0.5);
+    }
+    .preview-box {
+        padding: 50px;
+        background: rgba(15, 23, 42, 0.8);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 32px;
+    }
+
+    /* Methodology Section */
+    .method-section {
+        padding: 120px 0;
+        display: flex;
+        gap: 80px;
+        align-items: center;
+        position: relative;
+        z-index: 10;
+    }
+    .method-text { flex: 1; }
+    .method-ui {
+        flex: 1.2;
+        background: #020617;
+        border: 1px solid rgba(255,255,255,0.05);
+        border-radius: 28px;
+        padding: 40px;
+        box-shadow: 0 30px 60px -10px rgba(0,0,0,0.6);
+        position: relative;
+        overflow: hidden;
+    }
+    .method-ui::after {
+        content: '';
+        position: absolute;
+        top: -50%; left: -50%; width: 200%; height: 200%;
+        background: radial-gradient(circle, rgba(59, 130, 246, 0.03) 0%, transparent 70%);
+        pointer-events: none;
+    }
+
+    /* Tool Logos */
+    .tool-strip {
+        padding: 80px 0;
+        border-top: 1px solid rgba(255,255,255,0.05);
+        text-align: center;
+        background: rgba(2, 6, 23, 0.5);
+        position: relative;
+        z-index: 10;
+    }
+    .tool-logos {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 80px;
+        opacity: 0.5;
+        flex-wrap: wrap;
+    }
+
+    .glass-btn {
+        background: rgba(255,255,255,0.05);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255,255,255,0.1);
+        color: #fff;
+        transition: all 0.3s;
+    }
+    .glass-btn:hover {
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+        border-color: rgba(255,255,255,0.2);
+    }
+
+    @media (max-width: 991px) {
+        .hero-h1 { font-size: 3.5rem; }
+        .grid-container { grid-template-columns: 1fr; }
+        .method-section { flex-direction: column; gap: 50px; }
+        .preview-box { padding: 30px; }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="row mb-4">
-        <div class="col-12">
-            <h2 class="fw-bold">Security Dashboard</h2>
-            {% if user.is_authenticated %}
-                <p class="text-muted">Welcome back, {{ user.full_name|default:user.email }}</p>
-            {% else %}
-                <p class="text-muted">Welcome to VulnVision</p>
-            {% endif %}
-        </div>
-    </div>
 
-    <div class="row g-4">
-        <!-- Stat Cards -->
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm border-start border-primary border-4">
-                <div class="card-body">
-                    <h6 class="text-muted small text-uppercase">Active Scans</h6>
-                    <h3 class="fw-bold mb-0">12</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm border-start border-danger border-4">
-                <div class="card-body">
-                    <h6 class="text-muted small text-uppercase">Vulnerabilities Found</h6>
-                    <h3 class="fw-bold mb-0">43</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm border-start border-warning border-4">
-                <div class="card-body">
-                    <h6 class="text-muted small text-uppercase">Pending Reviews</h6>
-                    <h3 class="fw-bold mb-0">7</h3>
-                </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm border-start border-success border-4">
-                <div class="card-body">
-                    <h6 class="text-muted small text-uppercase">Fixed Issues</h6>
-                    <h3 class="fw-bold mb-0">156</h3>
-                </div>
-            </div>
-        </div>
+{% if user.is_authenticated %}
+<!-- LOGGED IN DASHBOARD VIEW -->
+<!-- Note: The main logic for logged in users should be heavily handled via an automated redirect to dashboard:index -->
+<script>window.location.href = "{% url 'dashboard:index' %}";</script>
+<div class="p-5 text-center mt-5">
+    <div class="spinner-border text-primary" role="status">
+        <span class="visually-hidden">Loading Dashboard...</span>
     </div>
-
-    {% if not user.is_authenticated %}
-    <div class="row mt-5">
-        <div class="col-md-8 mx-auto text-center">
-            <div class="card border-0 shadow p-5">
-                <h1 class="display-4 fw-bold">Secure Your Pipeline</h1>
-                <p class="lead text-muted">Join VulnVision today to start scanning your infrastructure for vulnerabilities.</p>
-                <div class="mt-4">
-                    <a href="{% url 'register' %}" class="btn btn-primary btn-lg px-5">Get Started</a>
-                    <a href="{% url 'login' %}" class="btn btn-outline-dark btn-lg px-5 ms-2">Login</a>
-                </div>
-            </div>
-        </div>
-    </div>
-    {% endif %}
+    <h3 class="mt-4 text-white">Redirecting to Intelligence Center...</h3>
 </div>
+{% else %}
+
+<!-- Figma Inspired Landing Page -->
+<div class="landing-wrapper">
+    <div class="orb-1"></div>
+    <div class="orb-2"></div>
+    
+    <div class="container position-relative">
+        <!-- Hero -->
+        <section class="hero-container">
+            <div class="badge-glow">
+                <i class="fas fa-microchip me-2"></i> Powered by Gemma AI
+            </div>
+            <h1 class="hero-h1">One-Click Security Testing <br> with Intelligent Insights</h1>
+            <p class="hero-p">Automate penetration testing and analyze your infrastructure's security posture with AI-powered insights based on industry standards.</p>
+            
+            <div class="checklist-row">
+                <div class="check-item"><i class="fas fa-check"></i> 10+ Integrated Tools</div>
+                <div class="check-item"><i class="fas fa-check"></i> OWASP Methodology</div>
+                <div class="check-item"><i class="fas fa-check"></i> Next-Gen Architecture</div>
+                <div class="check-item"><i class="fas fa-check"></i> Continuous Monitoring</div>
+            </div>
+
+            <div class="d-flex justify-content-center gap-4">
+                <a href="{% url 'register' %}" class="btn btn-primary btn-lg px-5 py-3 shadow-lg fs-5 fw-bold" style="border-radius: 12px;">Get Started Today</a>
+                <a href="#features" class="btn glass-btn btn-lg px-5 py-3 shadow-lg fs-5 fw-bold" style="border-radius: 12px;">View All Features</a>
+            </div>
+
+            <!-- Dashboard Preview -->
+            <div class="preview-wrapper">
+                <div class="preview-box">
+                    <div class="row text-start align-items-center">
+                        <div class="col-lg-7">
+                            <div class="d-flex justify-content-between align-items-end mb-4">
+                                <h5 class="fw-bold mb-0 text-white">Real-Time Threat Overview</h5>
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2 fw-bold"><i class="fas fa-radiation me-1"></i>04 Critical Alerts</span>
+                            </div>
+                            <div class="p-3 rounded-4 mb-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="d-flex justify-content-between mb-3 small fw-bold">
+                                    <span class="text-white"><i class="fas fa-unlock-alt me-2 text-danger"></i>Broken Access Control</span> 
+                                    <span class="text-danger">High Risk</span>
+                                </div>
+                                <div class="progress" style="height: 6px; background: rgba(0,0,0,0.5); border-radius: 3px;">
+                                    <div class="progress-bar bg-danger" style="width: 85%; border-radius: 3px; box-shadow: 0 0 10px rgba(239,68,68,0.5);"></div>
+                                </div>
+                            </div>
+                            <div class="p-3 rounded-4 mb-3" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="d-flex justify-content-between mb-3 small fw-bold">
+                                    <span class="text-white"><i class="fas fa-key me-2 text-warning"></i>Cryptographic Failures</span> 
+                                    <span class="text-warning">Medium Risk</span>
+                                </div>
+                                <div class="progress" style="height: 6px; background: rgba(0,0,0,0.5); border-radius: 3px;">
+                                    <div class="progress-bar bg-warning" style="width: 45%; border-radius: 3px; box-shadow: 0 0 10px rgba(245,158,11,0.5);"></div>
+                                </div>
+                            </div>
+                            <div class="p-3 rounded-4" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05);">
+                                <div class="d-flex justify-content-between mb-3 small fw-bold">
+                                    <span class="text-white"><i class="fas fa-syringe me-2 text-info"></i>Injection Flaws</span> 
+                                    <span class="text-info">Ongoing check</span>
+                                </div>
+                                <div class="progress" style="height: 6px; background: rgba(0,0,0,0.5); border-radius: 3px;">
+                                    <div class="progress-bar bg-info progress-bar-striped progress-bar-animated" style="width: 65%; border-radius: 3px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 offset-lg-1 border-start border-secondary border-opacity-25 p-lg-5 text-center mt-5 mt-lg-0">
+                            <div class="h6 text-white-50 text-uppercase mb-3 tracking-widest fw-bold">Overall Risk Score</div>
+                            <div class="display-2 fw-bolder text-success mb-3" style="text-shadow: 0 0 30px rgba(16,185,129,0.3);">73.8%</div>
+                            <div class="badge bg-success bg-opacity-10 text-success p-2 px-4 rounded-pill border border-success border-opacity-25 fs-6">
+                                <i class="fas fa-shield-alt me-2"></i>Secure Infrastructure
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Grid -->
+        <section id="features" class="py-5 mt-5">
+            <div class="text-center mb-5">
+                <h6 class="text-uppercase text-primary fw-bold mb-3 small tracking-widest" style="letter-spacing: 3px;">Key Features</h6>
+                <h2 class="display-5 fw-bold text-white">Automated Defense Suite</h2>
+            </div>
+            <div class="grid-container">
+                <div class="glass-feature-card">
+                    <div class="card-icon"><i class="fas fa-terminal"></i></div>
+                    <h4>Auto Pentesting</h4>
+                    <p>Automatically scan your web vulnerabilities with Nmap, Nikto, GoBuster, and OWASP ZAP through a unified interface.</p>
+                </div>
+                <div class="glass-feature-card">
+                    <div class="card-icon"><i class="fas fa-shield-halved"></i></div>
+                    <h4>OWASP Top 10</h4>
+                    <p>Test for all critical vulnerabilities based on the latest OWASP Top 10 security framework comprehensively.</p>
+                </div>
+                <div class="glass-feature-card">
+                    <div class="card-icon"><i class="fas fa-brain"></i></div>
+                    <h4>AI-Powered Analysis</h4>
+                    <p>Leverage Google Gemma LLM to generate instant remediation advice and actionable strategic security insights.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Methodology -->
+        <section class="method-section">
+            <div class="method-text">
+                <h6 class="text-uppercase text-primary fw-bold mb-3 small tracking-widest" style="letter-spacing: 3px;">Framework</h6>
+                <h2 class="display-5 fw-bold mb-4 text-white">Our Methodology</h2>
+                <p class="text-white-50 fs-5 mb-5 lh-lg">VulnVision uses an OWASP-based security testing framework designed specifically for modern cloud-native architectures.</p>
+                
+                <div class="d-flex flex-column gap-4">
+                    <div class="d-flex align-items-center gap-3 p-3 rounded-4" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);"><i class="fas fa-circle-check text-success fs-4"></i> <span class="fs-5 fw-semibold text-white">Reconnaissance & Asset Mapping</span></div>
+                    <div class="d-flex align-items-center gap-3 p-3 rounded-4" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);"><i class="fas fa-circle-check text-success fs-4"></i> <span class="fs-5 fw-semibold text-white">Vulnerability Fingerprinting</span></div>
+                    <div class="d-flex align-items-center gap-3 p-3 rounded-4" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);"><i class="fas fa-circle-check text-success fs-4"></i> <span class="fs-5 fw-semibold text-white">Exploitation Payload Generation</span></div>
+                    <div class="d-flex align-items-center gap-3 p-3 rounded-4" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);"><i class="fas fa-circle-check text-success fs-4"></i> <span class="fs-5 fw-semibold text-white">Compliance Report Archiving</span></div>
+                </div>
+            </div>
+            <div class="method-ui">
+                <div class="d-flex align-items-center mb-4 border-bottom border-light border-opacity-10 pb-4">
+                    <div class="p-3 rounded-3 bg-primary bg-opacity-10 me-3 border border-primary border-opacity-25" style="box-shadow: 0 0 20px rgba(59,130,246,0.2);"><i class="fas fa-lock text-primary fs-3"></i></div>
+                    <h4 class="mb-0 text-white fw-bold">Live Execution Terminal</h4>
+                </div>
+                <div class="font-monospace text-white-50 mb-5 fs-6 lh-lg p-4 rounded-3" style="background: #000; border: 1px solid #1e293b;">
+                    <div class="mb-2 text-success"><span class="text-white-50">$</span> [INIT] Scanning target.com...</div>
+                    <div class="mb-2"><span class="text-white-50">$</span> [INFO] Loading custom scripts...</div>
+                    <div class="mb-2 text-white fw-bold"><span class="text-white-50">$</span> [ALERT] Found: CVE-2023-XXXX (SSRF) ✓</div>
+                    <div class="mb-2 text-primary"><span class="text-white-50">$</span> [AI] Generating remediation advice...</div>
+                    <div class="mb-2 text-info"><span class="text-white-50">$</span> [DONE] Report archived successfully.</div>
+                    <div class="animated-cursor d-inline-block" style="width: 10px; height: 1.2em; background: #fff; animation: blink 1s step-end infinite;"></div>
+                </div>
+                <a href="{% url 'login' %}" class="btn btn-primary w-100 py-3 fs-5 fw-bold shadow">Initialize Console</a>
+            </div>
+        </section>
+
+        <!-- Tools strip -->
+        <section class="tool-strip rounded-4 mb-5">
+            <h6 class="text-white text-uppercase small fw-bold mb-5 tracking-widest" style="letter-spacing: 2px;">Integrated Enterprise Technologies</h6>
+            <div class="tool-logos">
+                <div class="d-flex align-items-center gap-3 fs-3 text-white fw-bold"><i class="fas fa-shield-virus text-primary"></i> <span style="font-family: sans-serif;">ZAP</span></div>
+                <div class="d-flex align-items-center gap-3 fs-3 text-white fw-bold"><i class="fas fa-cube text-info"></i> <span style="font-family: sans-serif;">GoBuster</span></div>
+                <div class="d-flex align-items-center gap-3 fs-3 text-white fw-bold"><i class="fas fa-satellite text-danger"></i> <span style="font-family: sans-serif;">Nikto</span></div>
+                <div class="d-flex align-items-center gap-3 fs-3 text-white fw-bold"><i class="fas fa-eye text-success"></i> <span style="font-family: sans-serif;">Nmap</span></div>
+                <div class="d-flex align-items-center gap-3 fs-3 text-white fw-bold"><i class="fas fa-gem text-warning"></i> <span style="font-family: sans-serif;">Gemma LLM</span></div>
+            </div>
+        </section>
+
+        <footer class="py-5 text-center mt-5 border-top border-secondary border-opacity-25 pb-5">
+            <div class="mb-4">
+                <span class="fs-4 fw-bolder text-white">Vuln<span class="text-primary">Vision</span></span>
+            </div>
+            <p class="text-white-50 small">&copy; 2026 VulnVision Security Intelligence. All rights reserved.</p>
+        </footer>
+    </div>
+</div>
+
+<style>
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+</style>
+
+{% endif %}
 {% endblock %}

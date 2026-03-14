@@ -3,64 +3,126 @@
 
 {% block title %}Queue Scan - VulnVision{% endblock %}
 
+{% block extra_css %}
+<style>
+.glass-panel {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+}
+.glass-panel::before {
+    content: '';
+    position: absolute;
+    top: -50px; left: -50px;
+    width: 200px; height: 200px;
+    background: rgba(59, 130, 246, 0.15);
+    filter: blur(60px);
+    z-index: 0;
+}
+.form-control, .form-select {
+    background: rgba(15, 23, 42, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+}
+.form-control:focus, .form-select:focus {
+    border-color: var(--vt-primary) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+    background: rgba(15, 23, 42, 0.9) !important;
+}
+label {
+    color: #94a3b8 !important;
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+.form-text {
+    color: #64748b !important;
+}
+.json-editor {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.85rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center py-5">
-    <div class="col-md-7">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body p-5">
-                <h3 class="fw-bold mb-4"><i class="fas fa-satellite-dish me-2 text-primary"></i>Configure New Scan</h3>
-                <hr class="mb-4">
-                
-                <form method="post">
-                    {% csrf_token %}
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            {{ form.target|as_crispy_field }}
-                        </div>
-                        <div class="col-md-6">
-                            {{ form.scan_type|as_crispy_field }}
-                        </div>
+<div class="container py-5">
+    <div class="row w-100 justify-content-center">
+        <div class="col-md-9 col-lg-7">
+            
+            <div class="glass-panel my-4 border-info border-opacity-25" style="border-radius: 12px; background: rgba(14, 165, 233, 0.05);">
+                <div class="p-4 d-flex align-items-center position-relative" style="z-index: 1;">
+                    <i class="fas fa-info-circle fa-2x text-info me-3"></i>
+                    <div>
+                        <h6 class="fw-bold mb-1 text-info text-uppercase tracking-widest small">Execution Notice</h6>
+                        <span class="text-white-50 small">Scans are processed asynchronously. Large targets or deep web scans may take several minutes to several hours depending on complexity.</span>
                     </div>
-                    
-                    <div class="mt-3">
-                        {{ form.name|as_crispy_field }}
-                        <small class="text-muted">Example: "Monthly Security Audit - Prod AWS"</small>
-                    </div>
-
-                    <div class="mt-4 p-3 bg-light rounded border">
-                        <h6 class="fw-bold mb-3"><i class="fas fa-cog me-2"></i>Advanced Configuration (JSON)</h6>
-                        {{ form.config|as_crispy_field }}
-                        <div class="small text-muted">
-                            Leave empty for defaults. Examples:<br>
-                            <strong>Nmap:</strong> <code>{"ports": "top-100", "aggressive": true}</code><br>
-                            <strong>Nikto:</strong> <code>{"tuning": "1,2,3", "timeout": 10, "use_ssl": true}</code>
-                        </div>
-                    </div>
-
-                    <div class="d-flex justify-content-end gap-2 mt-5">
-                        <a href="{% url 'scans:scan_list' %}" class="btn btn-outline-secondary px-4">Cancel</a>
-                        <button type="submit" class="btn btn-primary px-5">
-                            <i class="fas fa-play me-2"></i>Launch Scan
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
-        </div>
-        
-        <div class="mt-4 card border-0 bg-info-soft p-4">
-            <div class="d-flex align-items-center">
-                <i class="fas fa-info-circle fa-2x text-info me-3"></i>
-                <div>
-                    <h6 class="fw-bold mb-1 text-info">Scanning Note</h6>
-                    <small class="text-dark">Scans are processed asynchronously. Large targets or deep web scans may take several minutes to several hours depending on complexity.</small>
+
+            <div class="glass-panel my-4">
+                <div class="p-5 position-relative" style="z-index: 1;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="d-inline-block position-relative me-3">
+                            <div class="position-absolute top-50 start-50 translate-middle" style="width: 50px; height: 50px; background: rgba(59, 130, 246, 0.2); filter: blur(15px); border-radius: 50%;"></div>
+                            <i class="fas fa-satellite-dish fa-2x text-primary position-relative" style="text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);"></i>
+                        </div>
+                        <div>
+                            <h3 class="fw-bold text-white mb-0" style="font-size: 1.8rem;">Initialize Assessment</h3>
+                            <p class="text-white-50 small tracking-widest text-uppercase mb-0 mt-1">Configure & Dispatch Security Scan</p>
+                        </div>
+                    </div>
+                    
+                    <hr class="border-secondary opacity-25 mb-4">
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="row g-4 mb-4">
+                            <div class="col-md-6">
+                                {{ form.target|as_crispy_field }}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.scan_type|as_crispy_field }}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            {{ form.name|as_crispy_field }}
+                            <div class="form-text small mt-1"><i class="fas fa-info-circle me-1"></i>Example: "Monthly Security Audit - Prod AWS"</div>
+                        </div>
+
+                        <div class="mt-5 p-4 rounded-4" style="background: rgba(0,0,0,0.2); border: 1px solid rgba(255,255,255,0.05);">
+                            <h6 class="text-white fw-bold mb-3 d-flex align-items-center">
+                                <i class="fas fa-code text-primary me-2"></i>Advanced Configuration Parameters (JSON)
+                            </h6>
+                            {{ form.config|as_crispy_field }}
+                            <div class="small text-white-50 mt-3 p-3 rounded" style="background: rgba(15, 23, 42, 0.8);">
+                                <div class="mb-1"><i class="fas fa-lightbulb text-warning me-1"></i> Leave empty for engine defaults. Examples:</div>
+                                <div class="font-monospace mt-2 text-info"><strong>Nmap:</strong> <code>{"ports": "top-100", "aggressive": true}</code></div>
+                                <div class="font-monospace mt-1 text-success"><strong>Nikto:</strong> <code>{"tuning": "1,2,3", "timeout": 10, "use_ssl": true}</code></div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-3 mt-5 pt-4 border-top border-secondary border-opacity-25">
+                            <a href="{% url 'scans:scan_list' %}" class="btn btn-outline-secondary px-4 py-2 text-uppercase tracking-widest small fw-bold" style="border-radius: 8px;">Cancel</a>
+                            <button type="submit" class="btn btn-primary px-5 py-2 text-uppercase tracking-widest small fw-bold shadow-lg position-relative" style="border-radius: 8px; overflow: hidden;">
+                                <div class="position-absolute top-0 start-0 w-100 h-100 bg-white opacity-25" style="transform: skew(-20deg) translateX(-150%); transition: transform 0.5s;"></div>
+                                <i class="fas fa-play me-2"></i>Dispatch Scan
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
     </div>
 </div>
-
-<style>
-    .bg-info-soft { background-color: #e1f5fe; border: 1px solid #b3e5fc; }
-</style>
 {% endblock %}

@@ -29,11 +29,16 @@ INSTALLED_APPS = [
     'crispy_forms',
     'crispy_bootstrap5',
     'django_extensions',
+    'rest_framework',
+    'rest_framework.authtoken',
+    'drf_spectacular',
 
     # Local apps
     'apps.core',
     'apps.targets',
     'apps.scans',
+    'apps.ai_assistant',
+    'apps.api',
 ]
 
 MIDDLEWARE = [
@@ -66,13 +71,31 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'vulnvision.wsgi.application'
 
-# Database Setup (SQLite dev, prepared for PostgreSQL prod)
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+# ── Database ─────────────────────────────────────────────────
+# Uses PostgreSQL when DB_HOST is set (Docker/production),
+# falls back to SQLite for local dev.
+if os.getenv('DB_HOST'):
+    DATABASES = {
+        'default': {
+            'ENGINE':   'django.db.backends.postgresql',
+            'NAME':     os.getenv('DB_NAME', 'vulnvision'),
+            'USER':     os.getenv('DB_USER', 'vulnvision'),
+            'PASSWORD': os.getenv('DB_PASSWORD', ''),
+            'HOST':     os.getenv('DB_HOST', 'postgres'),
+            'PORT':     os.getenv('DB_PORT', '5432'),
+            'CONN_MAX_AGE': 60,
+            'OPTIONS': {
+                'sslmode': os.getenv('DB_SSL_MODE', 'prefer'),
+            },
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -108,6 +131,36 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom User Model definition
 AUTH_USER_MODEL = 'core.User'
+
+# ── ALLOWED_HOSTS (env configurable) ─────────────────────────
+_hosts = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+ALLOWED_HOSTS = [h.strip() for h in _hosts.split(',') if h.strip()]
+CSRF_TRUSTED_ORIGINS = [
+    f"https://{h}" for h in ALLOWED_HOSTS if h not in ('localhost', '127.0.0.1')
+] + ['http://localhost', 'http://127.0.0.1']
+
+# ── Cache (Redis in Docker, local-memory fallback) ────────────
+if os.getenv('REDIS_HOST') or os.getenv('CACHE_LOCATION'):
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+            'LOCATION': os.getenv(
+                'CACHE_LOCATION',
+                f"redis://:{os.getenv('REDIS_PASSWORD', '')}@"
+                f"{os.getenv('REDIS_HOST', 'redis')}:"
+                f"{os.getenv('REDIS_PORT', '6379')}/2"
+            ),
+            'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient'},
+            'KEY_PREFIX': 'vulnvision',
+            'TIMEOUT': 300,
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
+    }
 
 # Crispy Forms specific Configs
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
@@ -154,3 +207,118 @@ ZAP_API_KEY = os.getenv('ZAP_API_KEY', 'vulnvision_zap_key')
 ZAP_BASE_URL = os.getenv('ZAP_BASE_URL', 'http://localhost:8080')
 CELERY_TASK_TRACK_STARTED = True
 CELERY_TASK_TIME_LIMIT = 30 * 60 # 30 minutes
+
+# AI Configuration
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY')
+GEMMA_MODEL_NAME = os.getenv('GEMMA_MODEL_NAME', 'gemma-3-27b-it')
+
+# External Vulnerability Database Integration
+NVD_API_KEY = os.getenv('NVD_API_KEY', '')  # Optional: increases NVD API rate limit
+
+# ─────────────────────────────────────────────
+# Django REST Framework Configuration
+# ─────────────────────────────────────────────
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'apps.api.authentication.APIKeyAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'apps.api.pagination.StandardResultsPagination',
+    'PAGE_SIZE': 25,
+    'DEFAULT_FILTER_BACKENDS': [
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+        'rest_framework.renderers.BrowsableAPIRenderer',
+    ],
+    # ── Global throttle defaults (overridden per-view as needed) ──────────
+    'DEFAULT_THROTTLE_CLASSES': [
+        'apps.api.throttles.AnonBurstThrottle',
+        'apps.api.throttles.UserSustainedThrottle',
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        # Built-in DRF named scopes (fallback)
+        'anon':            '30/min',
+        'user':            '1000/day',
+        # Custom scopes used by VulnVision throttle classes
+        'user_sustained':  '1000/day',
+        'scan_create':     '5/hour',
+        'ai_query':        '20/day',
+        'export':          '3/hour',
+    },
+}
+
+# ── Per-role throttle overrides (format: "scope.role": "N/period") ────────
+# These override the class-level defaults inside RoleAwareRateThrottle.
+# Modify here without touching code to tune limits per environment/plan.
+ROLE_THROTTLE_RATES = {
+    # Viewer (read-only, restricted)
+    'user_sustained.viewer':  '500/day',
+    'scan_create.viewer':     '3/hour',
+    'ai_query.viewer':        '10/day',
+    'export.viewer':          '1/hour',
+    # Analyst (default power user)
+    'user_sustained.analyst': '2000/day',
+    'scan_create.analyst':    '5/hour',
+    'ai_query.analyst':       '20/day',
+    'export.analyst':         '3/hour',
+    # Admin — use None (unlimited) handled inside RoleAwareRateThrottle
+    'user_sustained.admin':   None,
+    'scan_create.admin':      None,
+    'ai_query.admin':         None,
+    'export.admin':           None,
+}
+
+
+# ─────────────────────────────────────────────
+# drf-spectacular (OpenAPI) Configuration
+# ─────────────────────────────────────────────
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'VulnVision REST API',
+    'DESCRIPTION': (
+        'Comprehensive API for the VulnVision security scanning platform. '
+        'Manage targets, scans, and vulnerability findings. '
+        'Supports Token, Session, and API Key authentication.'
+    ),
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+    'CONTACT': {'name': 'VulnVision Team'},
+    'LICENSE': {'name': 'MIT'},
+    'TAGS': [
+        {'name': 'auth',            'description': 'Authentication & current user'},
+        {'name': 'targets',         'description': 'Target management'},
+        {'name': 'scans',           'description': 'Scan management & control'},
+        {'name': 'vulnerabilities', 'description': 'Vulnerability findings'},
+        {'name': 'owasp-scans',     'description': 'OWASP ZAP scan results'},
+        {'name': 'dashboard',       'description': 'Aggregated stats'},
+    ],
+    'SECURITY': [
+        {'tokenAuth': []},
+        {'apiKeyAuth': []},
+    ],
+    'COMPONENT_SPLIT_REQUEST': True,
+}
+
+# External Vulnerability Database Integration
+NVD_API_KEY = os.getenv('NVD_API_KEY', '')  # Optional
+
+# Celery Beat Scheduled Tasks
+from celery.schedules import crontab
+CELERY_BEAT_SCHEDULE = {
+    'daily-vuln-db-refresh': {
+        'task': 'apps.scans.tasks.daily_vulnerability_db_refresh',
+        'schedule': crontab(hour=2, minute=0),  # Every day at 2:00 AM
+    },
+    'weekly-security-reports': {
+        'task': 'apps.scans.tasks.send_weekly_reports_task',
+        'schedule': crontab(hour=8, minute=0, day_of_week='monday'),  # Every Monday 8 AM
+    },
+}
+

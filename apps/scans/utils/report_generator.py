@@ -1,12 +1,12 @@
 import os
 from io import BytesIO
-from django.template.loader import get_template
+from django.template.loader import render_to_string, get_template
 from xhtml2pdf import pisa
 from django.conf import settings
 
-def generate_pdf_report(template_src, context_dict):
+def generate_pdf_report(template_src, context_dict, base_url=None):
     """
-    Renders a Django template into a PDF file using xhtml2pdf.
+    Renders a Django template into a professional PDF file using xhtml2pdf.
     """
     template = get_template(template_src)
     html  = template.render(context_dict)

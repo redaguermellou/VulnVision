@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+        <!-- Sidebar: History & suggestions -->
+<style>
+    #chat-messages::-webkit-scrollbar { width: 6px; }
+    #chat-messages::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    #chat-messages::-webkit-scrollbar-track { background: transparent; }
+    
+    .chat-card {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid var(--vt-border);
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
+        overflow: hidden;
+    }
+    
+    .message-bubble { 
+        position: relative;
+        transition: transform 0.2s ease;
+        padding: 16px 20px;
+        border-radius: 18px;
+        line-height: 1.6;
+    }
+    .message-container.user .message-bubble {
+        background: var(--vt-accent);
+        color: #000;
+        font-weight: 500;
+        border-bottom-right-radius: 4px;
+        box-shadow: 0 4px 15px rgba(16, 185, 129, 0.2);
+    }
+    .message-container.assistant .message-bubble {
+        background: rgba(30, 41, 59, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        color: #e2e8f0;
+        border-bottom-left-radius: 4px;
+    }
+    
+    .markdown-content pre {
+        background: #020617;
+        padding: 1.25rem;
+        border-radius: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        margin: 1rem 0;
+    }
+    
+    .suggest-btn {
+        background: rgba(255, 255, 255, 0.02);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        color: #94a3b8;
+        padding: 10px 14px;
+        border-radius: 10px;
+        transition: all 0.2s;
+        font-size: 0.85rem;
+    }
+    .suggest-btn:hover {
+        background: rgba(16, 185, 129, 0.1);
+        border-color: var(--vt-accent);
+        color: var(--vt-accent);
+    }
+
+    .chat-input-wrapper {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid var(--vt-border);
+        border-radius: 16px;
+        padding: 8px;
+        transition: border-color 0.3s;
+    }
+    .chat-input-wrapper:focus-within {
+        border-color: var(--vt-accent);
+        box-shadow: 0 0 0 1px var(--vt-accent);
+    }
+    #chat-input {
+        background: transparent !important;
+        border: none !important;
+        color: #fff !important;
+        box-shadow: none !important;
+    }
+</style>
+
+<div class="container-fluid h-100 py-4">
+    <div class="row h-100">
+        <!-- Sidebar -->
+        <div class="col-md-3 d-none d-md-block h-100">
+            <div class="chat-card h-100 p-4">
+                <h6 class="text-uppercase small fw-bold text-white-50 mb-4 tracking-widest">Active Context</h6>
+                
+                {% if target %}
+                <div class="mb-4">
+                    <div class="small text-white-50 mb-1">Target</div>
+                    <div class="fw-bold">{{ target.name }}</div>
+                    <div class="small text-white-50 font-monospace">{{ target.ip_address|default:target.domain }}</div>
+                </div>
+                {% endif %}
+                
+                {% if scan %}
+                <div class="mb-4">
+                    <div class="small text-white-50 mb-1">Current Scan</div>
+                    <div class="fw-bold">{{ scan.get_scan_type_display }}</div>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill small px-2">Active</span>
+                </div>
+                {% endif %}
+
+                <h6 class="text-uppercase small fw-bold text-white-50 mt-5 mb-3 tracking-widest">Suggestions</h6>
+                <div id="suggested-questions" class="d-flex flex-column gap-2">
+                    <button class="suggest-btn text-start">How do I fix critical vulns?</button>
+                    <button class="suggest-btn text-start">Analyze port 443</button>
+                    <button class="suggest-btn text-start">Generate report summary</button>
+                </div>
+                
+                <div class="mt-auto pt-4">
+                    <a href="{% url 'ai_assistant:history' %}" class="btn btn-outline-primary btn-sm w-100 rounded-pill">
+                        <i class="fas fa-history me-2"></i>Full History
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Chat Area -->
+        <div class="col-md-9 col-sm-12 h-100 d-flex flex-column">
+            <div class="chat-card flex-grow-1 d-flex flex-column" style="min-height: 80vh;">
+                <div class="px-4 py-3 border-bottom border-light-subtle d-flex justify-content-between align-items-center bg-dark-subtle">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="bg-primary-subtle p-2 rounded-3"><i class="fas fa-robot text-primary"></i></div>
+                        <div>
+                            <h5 class="mb-0 fw-bold">Cyber Intelligence Assistant</h5>
+                            <div id="typing-indicator" class="small text-success d-none"><i class="fas fa-circle-notch fa-spin me-1"></i> Thinking...</div>
+                        </div>
+                    </div>
+                    <a href="{% url 'ai_assistant:export' session.id %}" target="_blank" class="btn btn-primary btn-sm px-3 rounded-pill">
+                        <i class="fas fa-download me-2"></i>Export Analysis
+                    </a>
+                </div>
+
+                <div class="card-body overflow-auto flex-grow-1 p-4" id="chat-messages" style="height: 0;">
+                    <div class="message-container assistant mb-4">
+                        <div class="message-bubble">
+                            <p class="mb-0">Greetings. I've indexed the security context for <strong>{{ target.name|default:"the infrastructure" }}</strong>. How shall we proceed with the vulnerability analysis?</p>
+                        </div>
+                    </div>
+                    
+                    {% for message in messages %}
+                    <div class="message-container {{ message.role }} mb-4 {% if message.role == 'user' %}d-flex justify-content-end{% endif %}">
+                        <div class="message-bubble">
+                            <div class="markdown-content">
+                                {{ message.content|linebreaksbr }}
+                            </div>
+                            <small class="text-white-50 d-block mt-2 font-monospace" style="font-size: 0.7rem;">
+                                {{ message.created_at|date:"H:i" }}
+                            </small>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+
+                <div class="p-4 border-top border-light-subtle">
+                    <form id="chat-form">
+                        <div class="chat-input-wrapper d-flex align-items-end gap-2">
+                            <textarea id="chat-input" class="form-control" placeholder="Inquire about specific vulnerabilities or remediation tactics..." rows="1" style="resize: none;"></textarea>
+                            <button class="btn btn-primary rounded-circle" type="submit" id="send-btn" style="width: 44px; height: 44px; padding: 0;">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                        <div class="mt-2 text-center text-white-50" style="font-size: 0.75rem;">
+                            <i class="fas fa-shield-halved me-1"></i> Augmented by Google Gemma Security Model
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const chatForm = document.getElementById('chat-form');
+    const chatInput = document.getElementById('chat-input');
+    const chatMessages = document.getElementById('chat-messages');
+    const typingIndicator = document.getElementById('typing-indicator');
+    const suggestionsContainer = document.getElementById('suggested-questions');
+    const sessionId = "{{ session.id }}";
+
+    // Auto-scroll to bottom
+    const scrollToBottom = () => {
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    };
+    scrollToBottom();
+
+    // Auto-resize textarea
+    chatInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+        if (this.scrollHeight > 150) {
+            this.style.overflowY = 'scroll';
+            this.style.height = '150px';
+        } else {
+            this.style.overflowY = 'hidden';
+        }
+    });
+
+    chatForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const content = chatInput.value.trim();
+        if (!content) return;
+
+        appendMessage('user', content);
+        chatInput.value = '';
+        chatInput.style.height = 'auto';
+        
+        sendMessage(content);
+    });
+
+    chatInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            chatForm.dispatchEvent(new Event('submit'));
+        }
+    });
+
+    function appendMessage(role, content, isHtml = false) {
+        const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+        const container = document.createElement('div');
+        container.className = `message-container ${role} mb-3 ${role === 'user' ? 'd-flex justify-content-end' : ''}`;
+        
+        const alignmentClass = role === 'user' ? 'bg-primary' : 'bg-secondary';
+        const textAlignment = role === 'user' ? 'text-end text-white-50' : '';
+        
+        container.innerHTML = `
+            <div class="message-bubble ${alignmentClass} text-white p-3 rounded shadow-sm" style="max-width: 85%;">
+                <div class="markdown-content">
+                    ${isHtml ? content : content.replace(/\n/g, '<br>')}
+                </div>
+                <small class="text-white-50 d-block mt-1 ${textAlignment}">${time}</small>
+            </div>
+        `;
+        
+        chatMessages.appendChild(container);
+        scrollToBottom();
+    }
+
+    function sendMessage(content) {
+        typingIndicator.classList.remove('d-none');
+        
+        fetch("{% url 'ai_assistant:send_message' %}", {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({
+                content: content,
+                session_id: sessionId
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            typingIndicator.classList.add('d-none');
+            if (data.error) {
+                appendMessage('assistant', `<span class="text-danger">Error: ${data.error}</span>`, true);
+            } else {
+                appendMessage('assistant', data.content, true);
+                updateSuggestions(data.suggestions);
+            }
+        })
+        .catch(error => {
+            typingIndicator.classList.add('d-none');
+            appendMessage('assistant', '<span class="text-danger">Sorry, something went wrong.</span>', true);
+            console.error('Error:', error);
+        });
+    }
+
+    function updateSuggestions(suggestions) {
+        if (!suggestions || suggestions.length === 0) return;
+        
+        suggestionsContainer.innerHTML = '';
+        suggestions.forEach(q => {
+            const btn = document.createElement('button');
+            btn.className = 'btn btn-outline-secondary btn-sm mb-2 w-100 text-start suggest-btn';
+            btn.textContent = q;
+            btn.addEventListener('click', () => {
+                chatInput.value = q;
+                chatForm.dispatchEvent(new Event('submit'));
+            });
+            suggestionsContainer.appendChild(btn);
+        });
+    }
+
+    // Connect existing suggestion buttons
+    document.querySelectorAll('.suggest-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            chatInput.value = this.textContent;
+            chatForm.dispatchEvent(new Event('submit'));
+        });
+    });
+});
+</script>
+{% endblock %}

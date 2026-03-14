@@ -2,10 +2,10 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
-from django.views.generic import ListView, DetailView, CreateView, DeleteView, View
+from django.views.generic import ListView, DetailView, CreateView, DeleteView, View, TemplateView
 from django.db.models import Q, Count, Avg, F, Sum
 from django.utils import timezone
-from .models import Scan, Vulnerability, OWASPScan, OWASPAlert
+from .models import Scan, Vulnerability, OWASPScan, OWASPAlert, Report, DataExport
 from apps.targets.models import Target
 from .tasks import run_scan_task
 
@@ -64,8 +64,11 @@ class ScanCreateView(LoginRequiredMixin, CreateView):
         form.instance.user = self.request.user
         response = super().form_valid(form)
         # Automatically trigger the scan task asynchronously
-        run_scan_task.delay(self.object.id)
-        messages.success(self.request, f"Scan '{self.object.name}' has been queued.")
+        try:
+            run_scan_task.delay(self.object.id)
+            messages.success(self.request, f"Scan '{self.object.name}' has been queued.")
+        except Exception as e:
+            messages.warning(self.request, f"Scan '{self.object.name}' was created but could not be queued. Background worker issue.")
         return response
 
 class ScanDeleteView(LoginRequiredMixin, DeleteView):
@@ -93,8 +96,11 @@ class ScanRunView(LoginRequiredMixin, View):
         scan = get_object_or_404(Scan, pk=pk, user=request.user)
         if scan.status in ['pending', 'failed', 'stopped']:
             # Run scan asynchronously with Celery
-            run_scan_task.delay(scan.id)
-            messages.info(request, f"Scan '{scan.name}' has been queued.")
+            try:
+                run_scan_task.delay(scan.id)
+                messages.info(request, f"Scan '{scan.name}' has been queued.")
+            except Exception as e:
+                messages.error(request, f"Failed to queue scan '{scan.name}'. Background worker issue.")
         else:
             messages.error(request, "Scan is already running or completed.")
             
@@ -154,7 +160,7 @@ class VulnerabilityStatsView(LoginRequiredMixin, View):
         recent_vulns = vulns.filter(created_at__gte=last_7_days).order_by('-created_at')[:20]
         
         # Heatmap data (Date discovered)
-        date_stats = vulns.extra(select={'day': "date(created_at)"}).values('day').annotate(count=Count('id')).order_by('day')
+        date_stats = vulns.values('created_at__date').annotate(day=F('created_at__date'), count=Count('id')).order_by('created_at__date')
         
         # Chart Labels and Data
         context = {
@@ -170,12 +176,15 @@ class VulnerabilityStatsView(LoginRequiredMixin, View):
             'top_vulns': top_vulns,
             'recent_vulns': recent_vulns,
             
-            # Chart Data
-            'chart_severity_labels': [s['severity'] for s in severity_stats],
+            'severity_labels': [s['severity'] for s in severity_stats],
+            'severity_data': [s['count'] for s in severity_stats],
+            
+            # Updated to match the key expectations in stats/trends
+            'chart_severity_labels': [s['severity'].title() for s in severity_stats],
             'chart_severity_data': [s['count'] for s in severity_stats],
-            'chart_status_labels': [s['status'] for s in status_stats],
+            'chart_status_labels': [s['status'].replace('_', ' ').title() for s in status_stats],
             'chart_status_data': [s['count'] for s in status_stats],
-            'chart_date_labels': [str(s['day']) for s in date_stats],
+            'chart_date_labels': [str(s['created_at__date']) for s in date_stats],
             'chart_date_data': [s['count'] for s in date_stats],
             'chart_target_labels': [s['target__name'] for s in target_stats],
             'chart_target_data': [s['count'] for s in target_stats],
@@ -230,38 +239,146 @@ class ReportBuilderView(LoginRequiredMixin, View):
         
     def post(self, request):
         user = request.user
-        report_type = request.POST.get('format', 'pdf')
+        report_format = request.POST.get('format', 'pdf')
+        report_type = request.POST.get('report_type', 'technical')
         target_id = request.POST.get('target')
+        scan_id = request.POST.get('scan_id')
         severity = request.POST.get('severity')
+        email_to = request.POST.get('email', '')
         
         vulns = Vulnerability.objects.filter(scan__user=user)
         if target_id:
             vulns = vulns.filter(target_id=target_id)
+        if scan_id:
+            vulns = vulns.filter(scan_id=scan_id)
         if severity:
             vulns = vulns.filter(severity=severity)
             
-        if report_type == 'csv':
+        if report_format == 'csv':
             csv_data = generate_csv_report(vulns)
             response = HttpResponse(csv_data, content_type='text/csv')
             response['Content-Disposition'] = 'attachment; filename="vulnvision_report.csv"'
             return response
         else:
-            # Generate PDF
-            context = {
-                'vulnerabilities': vulns,
-                'user': user,
-                'target': Target.objects.get(id=target_id) if target_id else None,
-                'generated_at': timezone.now(),
-                'total_count': vulns.count(),
-                'critical_count': vulns.filter(severity='critical').count(),
-                'high_count': vulns.filter(severity='high').count()
+            filters = {}
+            if target_id: filters['target_id'] = target_id
+            if scan_id: filters['scan_id'] = scan_id
+            if severity: filters['severity'] = severity
+
+            title = f"On-Demand {report_type.replace('_', ' ').title()} Report"
+            if target_id:
+                title += f" - Target: {Target.objects.get(id=target_id).name}"
+
+            report = Report.objects.create(
+                user=user,
+                title=title,
+                report_type=report_type,
+                status='pending',
+                filters=filters
+            )
+            
+            try:
+                from .tasks import generate_and_email_report
+                generate_and_email_report.delay(report.id, email_to if email_to else None)
+                messages.success(request, "Report is being generated securely in the background. Check the Reports page.")
+            except Exception as e:
+                messages.warning(request, "Report request saved, but background worker is currently unavailable.")
+            return redirect('scans:report_list')
+
+
+class ReportListView(LoginRequiredMixin, ListView):
+    model = Report
+    template_name = 'scans/report_list.html'
+    context_object_name = 'reports'
+    paginate_by = 15
+
+    def get_queryset(self):
+        return Report.objects.filter(user=self.request.user)
+
+class ReportDownloadView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        report = get_object_or_404(Report, pk=pk, user=request.user)
+        if report.status == 'completed' and report.pdf_file:
+            response = HttpResponse(report.pdf_file.read(), content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{report.pdf_file.name.split("/")[-1]}"'
+            return response
+        else:
+            messages.error(request, "Report not ready or missing file.")
+            return redirect('scans:report_list')
+
+class ExportOptionsView(LoginRequiredMixin, TemplateView):
+    template_name = 'scans/export_options.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['targets'] = Target.objects.filter(user=self.request.user)
+        context['severity_choices'] = Vulnerability.SEVERITY_CHOICES
+        context['scans'] = Scan.objects.filter(user=self.request.user).order_by('-created_at')[:50]
+        return context
+
+    def post(self, request, *args, **kwargs):
+        export_range = request.POST.get('export_range', 'filtered')
+        export_format = request.POST.get('format', 'csv')
+        fields_str = request.POST.get('fields', '')
+        fields_selection = [f.strip() for f in fields_str.split(',')] if fields_str else []
+        
+        filters = {}
+        if export_range == 'filtered':
+            target_id = request.POST.get('target')
+            scan_id = request.POST.get('scan_id')
+            severity = request.POST.get('severity')
+            date_from = request.POST.get('date_from')
+            date_to = request.POST.get('date_to')
+            
+            if target_id: filters['target'] = target_id
+            if scan_id: filters['scan_id'] = scan_id
+            if severity: filters['severity'] = severity
+            if date_from: filters['date_from'] = date_from
+            if date_to: filters['date_to'] = date_to
+
+        export = DataExport.objects.create(
+            user=request.user,
+            export_range=export_range,
+            export_format=export_format,
+            status='pending',
+            filters=filters,
+            fields_selection=fields_selection
+        )
+        
+        try:
+            from .tasks import run_data_export
+            run_data_export.delay(export.id)
+            messages.success(request, f"Data export ({export_format.upper()}) is queued for processing.")
+        except Exception as e:
+            messages.warning(request, f"Data export ({export_format.upper()}) saved, but background worker is not available.")
+        return redirect('scans:export_list')
+
+class DataExportListView(LoginRequiredMixin, ListView):
+    model = DataExport
+    template_name = 'scans/export_list.html'
+    context_object_name = 'exports'
+    paginate_by = 15
+
+    def get_queryset(self):
+        return DataExport.objects.filter(user=self.request.user)
+
+class DataExportDownloadView(LoginRequiredMixin, View):
+    def get(self, request, pk):
+        export = get_object_or_404(DataExport, pk=pk, user=request.user)
+        if export.status == 'completed' and export.file:
+            content_types = {
+                'csv': 'text/csv',
+                'json': 'application/json',
+                'excel': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
             }
-            pdf = generate_pdf_report('reports/vulnerability_detail.html', context)
-            if pdf:
-                response = HttpResponse(pdf, content_type='application/pdf')
-                response['Content-Disposition'] = 'attachment; filename="vulnvision_report.pdf"'
-                return response
-            return HttpResponse("Error generating PDF", status=500)
+            content_type = content_types.get(export.export_format, 'application/octet-stream')
+            response = HttpResponse(export.file.read(), content_type=content_type)
+            response['Content-Disposition'] = f'attachment; filename="{export.file.name.split("/")[-1]}"'
+            return response
+        else:
+            messages.error(request, "Export file is not ready or failed.")
+            return redirect('scans:export_list')
+
 
 from .tasks import run_owasp_scan_task
 
@@ -282,8 +399,11 @@ class OWASPScanCreateView(LoginRequiredMixin, CreateView):
     def form_valid(self, form):
         form.instance.user = self.request.user
         response = super().form_valid(form)
-        run_owasp_scan_task.delay(self.object.id)
-        messages.success(self.request, "OWASP Top 10 Scan started successfully.")
+        try:
+            run_owasp_scan_task.delay(self.object.id)
+            messages.success(self.request, "OWASP Top 10 Scan started successfully.")
+        except Exception as e:
+            messages.warning(self.request, "OWASP scan target saved, but background worker is unavailable to start scan.")
         return response
 
 class OWASPScanDetailView(LoginRequiredMixin, DetailView):
@@ -300,3 +420,64 @@ class OWASPScanDetailView(LoginRequiredMixin, DetailView):
         context['category_stats'] = categories
         context['alerts'] = alerts
         return context
+
+
+# ─────────────────────────────────────────────
+# External Vulnerability Database (VDB) Views
+# ─────────────────────────────────────────────
+from django.http import JsonResponse
+from .tasks import refresh_vulnerability_db, daily_vulnerability_db_refresh
+
+class VulnerabilityDetailView(LoginRequiredMixin, View):
+    """Returns detailed vulnerability data (CVSS, exploits, NVD refs) as JSON for the modal."""
+    def get(self, request, pk):
+        vuln = get_object_or_404(Vulnerability, pk=pk, scan__user=request.user)
+        data = {
+            'id': vuln.id,
+            'title': vuln.title,
+            'description': vuln.description,
+            'severity': vuln.severity,
+            'cve_id': vuln.cve_id,
+            'cwe_id': vuln.cwe_id,
+            'cvss_score': vuln.cvss_score,
+            'cvss_vector': vuln.cvss_vector,
+            'has_exploit': vuln.has_exploit,
+            'exploit_refs': vuln.exploit_refs,
+            'component': vuln.component,
+            'last_updated_db': vuln.last_updated_db.isoformat() if vuln.last_updated_db else None,
+            # Pull safe subset of NVD description if available
+            'nvd_description': (vuln.external_data.get('descriptions', [{}])[0].get('value', ''))
+                               if vuln.external_data else '',
+            'nvd_url': f"https://nvd.nist.gov/vuln/detail/{vuln.cve_id}" if vuln.cve_id else '',
+            'exploitdb_url': f"https://www.exploit-db.com/search?cve={vuln.cve_id}" if vuln.cve_id else '',
+            'mitre_url': f"https://cve.mitre.org/cgi-bin/cvename.cgi?name={vuln.cve_id}" if vuln.cve_id else '',
+        }
+        return JsonResponse(data)
+
+
+class RefreshVulnerabilityDBView(LoginRequiredMixin, View):
+    """On-demand NVD enrichment for a single vulnerability (triggered by user from UI)."""
+    def post(self, request, pk):
+        vuln = get_object_or_404(Vulnerability, pk=pk, scan__user=request.user)
+        if not vuln.cve_id:
+            return JsonResponse({'status': 'error', 'message': 'No CVE ID for this vulnerability.'}, status=400)
+
+        # Queue background task
+        try:
+            refresh_vulnerability_db.delay(vuln.id)
+            return JsonResponse({'status': 'queued', 'message': f'Refresh queued for {vuln.cve_id}'})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': 'Background worker unavailable.'}, status=503)
+
+
+class TriggerDailyRefreshView(LoginRequiredMixin, View):
+    """Staff-only view to manually kick off the daily database refresh task."""
+    def post(self, request):
+        if not request.user.is_staff:
+            return JsonResponse({'status': 'error', 'message': 'Permission denied.'}, status=403)
+        try:
+            task = daily_vulnerability_db_refresh.delay()
+            return JsonResponse({'status': 'queued', 'task_id': task.id})
+        except Exception as e:
+            return JsonResponse({'status': 'error', 'message': 'Background worker unavailable.'}, status=503)
+

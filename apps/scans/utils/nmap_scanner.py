@@ -5,6 +5,7 @@ import tempfile
 import logging
 import re
 from datetime import datetime
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -121,7 +122,7 @@ class NmapScanner:
             
             for host in root.findall('host'):
                 status_el = host.find('status')
-                host_data = {
+                host_data: dict[str, Any] = {
                     'status': status_el.get('state') if status_el is not None else 'unknown',
                     'addresses': {},
                     'hostnames': [],
@@ -140,7 +141,7 @@ class NmapScanner:
                 if ports_el is not None:
                     for port in ports_el.findall('port'):
                         state_el = port.find('state')
-                        p_data = {
+                        p_data: dict[str, Any] = {
                             'portid': port.get('portid'),
                             'protocol': port.get('protocol'),
                             'state': state_el.get('state') if state_el is not None else 'unknown',
@@ -171,6 +172,8 @@ class NmapScanner:
                             'accuracy': os_match.get('accuracy')
                         })
                     
+                if not isinstance(results.get('hosts'), list):
+                    results['hosts'] = []
                 results['hosts'].append(host_data)
             return results
         except Exception as e:

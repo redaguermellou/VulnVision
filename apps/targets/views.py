@@ -8,8 +8,10 @@ from django.contrib.auth.decorators import login_required
 from django.views.generic import ListView, CreateView, DetailView, UpdateView, DeleteView, FormView, View
 from django.db.models import Q
 from django.http import HttpResponse
+from django.utils import timezone
 from .models import Target
 from .forms import TargetImportForm
+from django.apps import apps
 
 class TargetListView(LoginRequiredMixin, ListView):
     model = Target
@@ -191,3 +193,30 @@ class TargetImportProcessView(LoginRequiredMixin, View):
             'error_count': error_count,
             'errors': errors
         })
+
+class TargetScanTriggerView(LoginRequiredMixin, View):
+    def post(self, request, pk):
+        target = get_object_or_404(Target, pk=pk, user=request.user)
+        
+        # Avoid circular import by fetching model dynamically
+        Scan = apps.get_model('scans', 'Scan')
+        from apps.scans.tasks import run_scan_task
+        
+        scan_name = f"Quick Assessment - {target.name} - {timezone.now().strftime('%Y-%m-%d %H:%M')}"
+        
+        scan = Scan.objects.create(
+            user=request.user,
+            target=target,
+            name=scan_name,
+            scan_type='full',
+            status='pending'
+        )
+        
+        try:
+            run_scan_task.delay(scan.id)
+            messages.success(request, f"Scan '{scan.name}' has been initiated for {target.name}.")
+        except Exception as e:
+            messages.warning(request, f"Scan '{scan.name}' created but couldn't be queued. Is Celery running?")
+            
+        return redirect('scans:scan_detail', pk=scan.id)
+

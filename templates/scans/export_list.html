@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block title %}Data Exports - VulnVision{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-0">Filtered Data Exports</h2>
+            <p class="text-white-50 small">View and download your requested CSV, Excel, and JSON exports.</p>
+        </div>
+        <div>
+            <a href="{% url 'scans:export_options' %}" class="btn btn-primary d-inline-flex align-items-center">
+                <i class="fas fa-plus me-2"></i> New Export
+            </a>
+        </div>
+    </div>
+
+    <div class="glass-panel overflow-hidden mb-4 mt-5">
+        <div class="table-responsive z-1 position-relative">
+            <table class="table table-hover align-middle mb-0 text-white" style="--bs-table-bg: transparent; --bs-table-color: #f8fafc;">
+                <thead style="background: rgba(0, 0, 0, 0.2);">
+                    <tr>
+                        <th class="border-secondary border-opacity-10 py-3 ps-4 text-white-50 text-uppercase small tracking-widest fw-bold">ID / Scope</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">Format</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">Status</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">Date Generated</th>
+                        <th class="border-secondary border-opacity-10 py-3 pe-4 text-white-50 text-uppercase small tracking-widest fw-bold text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody style="border-top: none;">
+                    {% for exp in exports %}
+                    <tr>
+                        <td class="border-secondary border-opacity-25 py-3 ps-4 fw-bold fs-6 text-white">
+                            #{{ exp.id }} - {{ exp.get_export_range_display }}
+                            {% if exp.filters %}
+                                <div class="small fw-normal text-info font-monospace mt-1"><i class="fas fa-filter me-1 text-white-50"></i>Filters applied</div>
+                            {% endif %}
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3">
+                            {% if exp.export_format == 'csv' %}
+                                <span class="badge border border-success border-opacity-25 bg-success bg-opacity-10 text-success text-uppercase px-3 py-2"><i class="fas fa-file-csv me-1"></i>CSV</span>
+                            {% elif exp.export_format == 'excel' %}
+                                <span class="badge border border-primary border-opacity-25 bg-primary bg-opacity-10 text-primary text-uppercase px-3 py-2"><i class="fas fa-file-excel me-1"></i>Excel</span>
+                            {% else %}
+                                <span class="badge border border-warning border-opacity-25 bg-warning bg-opacity-10 text-warning text-uppercase px-3 py-2"><i class="fas fa-code me-1"></i>JSON</span>
+                            {% endif %}
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3">
+                            {% if exp.status == 'completed' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i>Ready</span>
+                            {% elif exp.status == 'processing' or exp.status == 'pending' %}
+                                <span class="badge bg-secondary bg-opacity-10 text-white-50 border border-secondary border-opacity-25 px-3 py-2 rounded-pill"><i class="fas fa-spinner fa-spin me-1"></i>Processing</span>
+                            {% else %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2 rounded-pill" title="{{ exp.error_message }}"><i class="fas fa-times-circle me-1"></i>Failed</span>
+                            {% endif %}
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3 text-white-50 font-monospace small">
+                            <i class="far fa-calendar-alt me-1"></i>{{ exp.created_at|date:"M j, Y, H:i" }}
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3 pe-4 text-end">
+                            {% if exp.status == 'completed' and exp.file %}
+                            <a href="{% url 'scans:export_download' exp.id %}" class="btn btn-sm btn-outline-info shadow-sm rounded-pill px-3">
+                                <i class="fas fa-download me-1"></i> Download
+                            </a>
+                            {% else %}
+                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 opacity-50" disabled>
+                                <i class="fas fa-hourglass-half me-1"></i> Wait
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="py-4 text-white-50">
+                                <i class="fas fa-database fa-3x mb-4 text-info opacity-50" style="filter: drop-shadow(0 0 10px rgba(14, 165, 233, 0.3));"></i>
+                                <h5 class="fw-bold text-white">No Data Exports</h5>
+                                <p class="small mb-4">Use the export engine to generate CSV or Excel dumps.</p>
+                                <a href="{% url 'scans:export_options' %}" class="btn btn-primary rounded-pill px-4">Initialize Export</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a></li>
+            {% endif %}
+            <li class="page-item active"><a class="page-link" href="#">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</a></li>
+            {% if page_obj.has_next %}
+            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a></li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+<style>
+    .glass-panel {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        position: relative;
+    }
+    .glass-panel::before {
+        content: '';
+        position: absolute;
+        top: -50px; left: -50px;
+        width: 150px; height: 150px;
+        background: rgba(14, 165, 233, 0.1); /* light blue accent */
+        filter: blur(50px);
+        z-index: 0;
+        pointer-events: none;
+    }
+    
+    /* Table styles */
+    .table > :not(caption) > * > * {
+        background-color: transparent !important;
+        border-bottom-color: rgba(255,255,255,0.05);
+    }
+    
+    .table-hover tbody tr {
+        transition: background-color 0.2s ease;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.03) !important;
+    }
+</style>
+{% endblock %}

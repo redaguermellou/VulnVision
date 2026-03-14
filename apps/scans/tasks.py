@@ -12,6 +12,11 @@ from django.template.loader import render_to_string
 from django.contrib.auth.models import User
 from django.conf import settings
 from .utils.report_generator import generate_pdf_report
+from django.core.files.base import ContentFile
+import json
+import csv
+import pandas as pd
+from io import StringIO, BytesIO
 
 logger = logging.getLogger(__name__)
 
@@ -243,3 +248,280 @@ def run_owasp_scan_task(owasp_scan_id):
         if 'owasp_scan' in locals():
             owasp_scan.status = 'failed'
             owasp_scan.save()
+
+
+# ─────────────────────────────────────────────
+# External Vulnerability Database (VDB) Tasks
+# ─────────────────────────────────────────────
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def refresh_vulnerability_db(self, vuln_id):
+    """
+    Celery task to refresh NVD/Exploit-DB data for a single Vulnerability.
+    Retries up to 3 times on network errors.
+    """
+    from .utils.vdb_service import VDBService
+    try:
+        service = VDBService()
+        success, message = service.update_vulnerability(vuln_id)
+        logger.info(f"[VDB] Vuln #{vuln_id}: {message}")
+        return {'vuln_id': vuln_id, 'success': success, 'message': message}
+    except Exception as exc:
+        logger.error(f"[VDB] Error refreshing vuln #{vuln_id}: {exc}")
+        raise self.retry(exc=exc)
+
+
+@shared_task
+def daily_vulnerability_db_refresh():
+    """
+    Celery Beat task: runs every day and queues individual refresh tasks
+    for all Vulnerability records that have a CVE ID and haven't been
+    updated in the last 24 hours.
+    """
+    from django.db.models import Q
+    from datetime import timedelta
+
+    cutoff = timezone.now() - timedelta(hours=24)
+    vulns = Vulnerability.objects.exclude(cve_id="").filter(
+        Q(last_updated_db__isnull=True) | Q(last_updated_db__lt=cutoff)
+    ).values_list('id', flat=True)
+
+    queued = 0
+    for vuln_id in vulns:
+        refresh_vulnerability_db.apply_async(
+            args=[vuln_id],
+            countdown=queued * 2  # stagger by 2 sec each to respect NVD rate limits
+        )
+        queued += 1
+
+    logger.info(f"[VDB] Daily refresh: queued {queued} vulnerability update tasks.")
+    return f"Queued {queued} tasks"
+
+
+@shared_task
+def enrich_new_scan_vulns(scan_id):
+    """
+    Called right after a scan completes to auto-enrich any findings that
+    have CVE IDs (populated by the scanner) with CVSS scores and exploit info.
+    """
+    try:
+        scan = Scan.objects.get(pk=scan_id)
+        vulns_with_cve = scan.vulnerabilities.exclude(cve_id="")
+        queued = 0
+        for vuln in vulns_with_cve:
+            refresh_vulnerability_db.delay(vuln.id)
+            queued += 1
+        logger.info(f"[VDB] Enrich scan #{scan_id}: queued {queued} tasks.")
+        return f"Queued {queued} enrichment tasks for scan #{scan_id}"
+    except Scan.DoesNotExist:
+        logger.error(f"[VDB] Scan #{scan_id} not found for enrichment.")
+        return "Error: scan not found"
+
+@shared_task(bind=True)
+def generate_and_email_report(self, report_id, email_to=None):
+    """
+    Celery task to generate a PDF report asynchronously and optionally email it.
+    """
+    from .models import Report, Vulnerability
+    try:
+        report = Report.objects.get(id=report_id)
+        report.status = 'generating'
+        report.save()
+
+        # Gather data based on report configuration
+        vulns = Vulnerability.objects.filter(scan__user=report.user)
+        
+        target_id = report.filters.get('target_id')
+        scan_id = report.filters.get('scan_id')
+        severity = report.filters.get('severity')
+        
+        if target_id:
+            vulns = vulns.filter(target_id=target_id)
+        if scan_id:
+            vulns = vulns.filter(scan_id=scan_id)
+        if severity:
+            vulns = vulns.filter(severity=severity)
+            
+        context = {
+            'report': report,
+            'vulnerabilities': vulns.order_by('-severity'),
+            'total_count': vulns.count(),
+            'critical_count': vulns.filter(severity='critical').count(),
+            'high_count': vulns.filter(severity='high').count(),
+            'medium_count': vulns.filter(severity='medium').count(),
+            'low_count': vulns.filter(severity='low').count(),
+            'info_count': vulns.filter(severity='info').count(),
+            'generated_at': timezone.now(),
+            'user': report.user,
+        }
+
+        # Determine template
+        template_map = {
+            'executive': 'reports/executive_summary.html',
+            'technical': 'reports/technical_report.html',
+            'compliance_pci': 'reports/compliance_pci.html',
+            'compliance_iso': 'reports/compliance_iso.html',
+        }
+        template_src = template_map.get(report.report_type, 'reports/technical_report.html')
+
+        pdf_bytes = generate_pdf_report(template_src, context)
+        
+        if pdf_bytes:
+            filename = f"report_{report.report_type}_{timezone.now().strftime('%Y%m%d%H%M%S')}.pdf"
+            report.pdf_file.save(filename, ContentFile(pdf_bytes))
+            report.file_size = len(pdf_bytes)
+            report.status = 'completed'
+            report.completed_at = timezone.now()
+            report.save()
+            
+            # Send Email if requested
+            if email_to:
+                subject = f"VulnVision {report.get_report_type_display()} - {report.title}"
+                body = f"Hello,\n\nYour requested report '{report.title}' has been generated.\n\nPlease find the attached PDF document."
+                email = EmailMessage(
+                    subject=subject,
+                    body=body,
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    to=[email_to],
+                )
+                email.attach(filename, pdf_bytes, 'application/pdf')
+                email.send()
+                
+            return f"Report {report_id} generated successfully"
+        else:
+            report.status = 'failed'
+            report.error_message = "PDF generation returned empty"
+            report.save()
+            return f"Report {report_id} failed: PDF generation failed"
+
+    except Exception as e:
+        logger.error(f"Report generation error: {str(e)}\n{traceback.format_exc()}")
+        try:
+            report = Report.objects.get(id=report_id)
+            report.status = 'failed'
+            report.error_message = str(e)
+            report.save()
+        except:
+            pass
+        return f"Error: {str(e)}"
+
+@shared_task(bind=True)
+def run_data_export(self, export_id):
+    """
+    Celery task to generate CSV, Excel, or JSON data exports asynchronously.
+    """
+    from .models import DataExport, Scan, Vulnerability
+    try:
+        export = DataExport.objects.get(id=export_id)
+        export.status = 'processing'
+        export.save()
+
+        # Gather Data
+        data_list = []
+        if export.export_range == 'all_scans':
+            scans = Scan.objects.filter(user=export.user)
+            for scan in scans:
+                data_list.append({
+                    'ID': scan.id,
+                    'Name': scan.name,
+                    'Target': scan.target.name,
+                    'Type': scan.get_scan_type_display(),
+                    'Status': scan.get_status_display(),
+                    'Critical': scan.critical_count,
+                    'High': scan.high_count,
+                    'Medium': scan.medium_count,
+                    'Low': scan.low_count,
+                    'Created At': scan.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                })
+        else:
+            # Vulnerabilities (all or filtered)
+            vulns = Vulnerability.objects.filter(scan__user=export.user)
+            
+            if export.export_range == 'filtered':
+                target_id = export.filters.get('target')
+                scan_id = export.filters.get('scan_id')
+                severity = export.filters.get('severity')
+                date_from = export.filters.get('date_from')
+                date_to = export.filters.get('date_to')
+                
+                if target_id: vulns = vulns.filter(target_id=target_id)
+                if scan_id: vulns = vulns.filter(scan_id=scan_id)
+                if severity: vulns = vulns.filter(severity=severity)
+                if date_from: vulns = vulns.filter(created_at__date__gte=date_from)
+                if date_to: vulns = vulns.filter(created_at__date__lte=date_to)
+
+            # Build data with selected fields or all
+            fields = export.fields_selection if export.fields_selection else [
+                'ID', 'Title', 'Severity', 'Target', 'Scan', 'Status', 
+                'Component', 'CVE ID', 'CWE ID', 'Created At'
+            ]
+            
+            for vuln in vulns:
+                item = {}
+                v_data = {
+                    'ID': vuln.id,
+                    'Title': vuln.title,
+                    'Severity': vuln.get_severity_display(),
+                    'Target': vuln.target.name,
+                    'Scan': vuln.scan.name,
+                    'Status': vuln.get_status_display(),
+                    'Component': vuln.component,
+                    'CVE ID': vuln.cve_id,
+                    'CWE ID': vuln.cwe_id,
+                    'Description': vuln.description,
+                    'Remediation': vuln.remediation,
+                    'Created At': vuln.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+                }
+                for f in fields:
+                    if f in v_data:
+                        item[f] = v_data[f]
+                data_list.append(item)
+
+        # Ensure we have data
+        if not data_list:
+            data_list = [{'Info': 'No data found matching criteria'}]
+
+        df = pd.DataFrame(data_list)
+        file_bytes = None
+        filename = f"export_{export.id}_{export.export_range}_{timezone.now().strftime('%Y%m%d%H%M')}."
+        
+        if export.export_format == 'csv':
+            filename += 'csv'
+            csv_buffer = StringIO()
+            df.to_csv(csv_buffer, index=False)
+            file_bytes = csv_buffer.getvalue().encode('utf-8')
+            
+        elif export.export_format == 'excel':
+            filename += 'xlsx'
+            excel_buffer = BytesIO()
+            with pd.ExcelWriter(excel_buffer, engine='openpyxl') as writer:
+                df.to_excel(writer, index=False, sheet_name='Export Data')
+            file_bytes = excel_buffer.getvalue()
+            
+        elif export.export_format == 'json':
+            filename += 'json'
+            json_buffer = StringIO()
+            df.to_json(json_buffer, orient='records', indent=4)
+            file_bytes = json_buffer.getvalue().encode('utf-8')
+
+        if file_bytes:
+            export.file.save(filename, ContentFile(file_bytes))
+            export.file_size = len(file_bytes)
+            export.status = 'completed'
+            export.completed_at = timezone.now()
+            export.save()
+            return f"Export {export_id} completed successfully"
+        else:
+            raise ValueError("File generation failed")
+
+    except Exception as e:
+        logger.error(f"Data Export error: {str(e)}\n{traceback.format_exc()}")
+        try:
+            export = DataExport.objects.get(id=export_id)
+            export.status = 'failed'
+            export.error_message = str(e)
+            export.save()
+        except:
+            pass
+        return f"Error: {str(e)}"
+

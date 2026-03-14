@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - VulnVision{% endblock %}
+
+{% block extra_css %}
+<style>
+.glass-panel {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+.form-control, .form-select, textarea {
+    background: rgba(15, 23, 42, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+}
+.form-control:focus, .form-select:focus, textarea:focus {
+    border-color: var(--vt-primary) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+    background: rgba(15, 23, 42, 0.9) !important;
+}
+.form-control:disabled {
+    background: rgba(0, 0, 0, 0.4) !important;
+    color: #64748b !important;
+}
+label {
+    color: #94a3b8 !important;
+    font-weight: 500;
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+.form-text {
+    color: #64748b !important;
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+}
+.list-group-item {
+    background: transparent;
+    color: #94a3b8;
+    border: none;
+    border-radius: 8px !important;
+    margin-bottom: 0.5rem;
+    transition: all 0.2s;
+}
+.list-group-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: #fff;
+}
+.list-group-item.active {
+    background: rgba(59, 130, 246, 0.15) !important;
+    color: #fff;
+    border-left: 3px solid var(--vt-primary);
+}
+.form-check-input {
+    background-color: rgba(15, 23, 42, 0.8);
+    border-color: rgba(255,255,255,0.2);
+}
+.form-check-input:checked {
+    background-color: var(--vt-primary);
+    border-color: var(--vt-primary);
+}
+.nav-link.text-danger:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: #ef4444 !important;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row g-4">
+        <div class="col-md-3">
+            <div class="glass-panel p-3 sticky-top" style="top: 100px;">
+                <div class="list-group list-group-flush" id="settings-tabs" role="tablist">
+                    <a class="list-group-item list-group-item-action active p-3" id="profile-tab" data-bs-toggle="list" href="#profile" role="tab">
+                        <i class="fas fa-user-circle me-3"></i> User Profile
+                    </a>
+                    <a class="list-group-item list-group-item-action p-3" id="preferences-tab" data-bs-toggle="list" href="#preferences" role="tab">
+                        <i class="fas fa-sliders-h me-3"></i> Preferences
+                    </a>
+                    <a class="list-group-item list-group-item-action p-3" id="integration-tab" data-bs-toggle="list" href="#integration" role="tab">
+                        <i class="fas fa-plug me-3"></i> Integrations
+                    </a>
+                    <a class="list-group-item list-group-item-action p-3" id="notifications-tab" data-bs-toggle="list" href="#notifications" role="tab">
+                        <i class="fas fa-bell me-3"></i> Notifications
+                    </a>
+                    <a class="list-group-item list-group-item-action nav-link text-danger p-3 mt-3 border-top border-secondary border-opacity-25 rounded-0" href="{% url 'password_change' %}">
+                        <i class="fas fa-key me-3"></i> Security
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-9">
+            <div class="tab-content" id="settings-tabContent">
+                <!-- User Profile -->
+                <div class="tab-pane fade show active" id="profile" role="tabpanel">
+                    <div class="glass-panel p-5">
+                        <div class="d-flex align-items-center mb-4">
+                            <i class="fas fa-user-shield fa-2x text-primary me-3"></i>
+                            <div>
+                                <h4 class="fw-bold mb-0 text-white">Personal Profile Status</h4>
+                                <p class="text-white-50 small mb-0 mt-1">Manage public and internal identity attributes</p>
+                            </div>
+                        </div>
+                        
+                        <hr class="border-secondary opacity-25 mb-4">
+                        
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="profile">
+                            <div class="row g-4 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Email Address</label>
+                                    <input type="email" class="form-control" value="{{ user.email }}" disabled>
+                                    <div class="form-text"><i class="fas fa-lock me-1"></i>Primary login email cannot be changed.</div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Full Name</label>
+                                    <input type="text" name="full_name" class="form-control" value="{{ user.full_name }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Company / Organization</label>
+                                    <input type="text" name="company" class="form-control" value="{{ user.company }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Phone Number</label>
+                                    <input type="text" name="phone_number" class="form-control" value="{{ profile.phone_number }}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Location</label>
+                                    <input type="text" name="location" class="form-control" value="{{ profile.location }}">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Biography</label>
+                                    <textarea name="bio" class="form-control" rows="4">{{ profile.bio }}</textarea>
+                                </div>
+                            </div>
+                            <div class="mt-5 pt-3 border-top border-secondary border-opacity-25 text-end">
+                                <button type="submit" class="btn btn-primary px-5 py-2 text-uppercase tracking-widest small fw-bold"><i class="fas fa-save me-2"></i>Update Profile</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Preferences -->
+                <div class="tab-pane fade" id="preferences" role="tabpanel">
+                    <div class="glass-panel p-5">
+                        <div class="d-flex align-items-center mb-4">
+                            <i class="fas fa-cogs fa-2x text-info me-3"></i>
+                            <div>
+                                <h4 class="fw-bold mb-0 text-white">Application Settings</h4>
+                                <p class="text-white-50 small mb-0 mt-1">Configure your environment preferences</p>
+                            </div>
+                        </div>
+                        
+                        <hr class="border-secondary opacity-25 mb-4">
+                        
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="preferences">
+                            
+                            <div class="p-4 mb-4 rounded-3 border border-secondary border-opacity-25" style="background: rgba(0,0,0,0.2);">
+                                <label class="form-label text-white"><i class="fas fa-paint-brush me-2 text-primary"></i>Interface Theme</label>
+                                <select name="theme" class="form-select mt-2">
+                                    <option value="dark" {% if settings.theme == 'dark' %}selected{% endif %}>Cyber Dark Mode (Active)</option>
+                                    <option value="light" {% if settings.theme == 'light' %}selected{% endif %}>High Contrast Light</option>
+                                </select>
+                            </div>
+                            
+                            <div class="p-4 mb-4 rounded-3 border border-secondary border-opacity-25" style="background: rgba(0,0,0,0.2);">
+                                <div class="form-check form-switch ps-0 d-flex align-items-center">
+                                    <div class="flex-grow-1">
+                                        <label class="form-check-label fw-bold text-white mb-1" for="aiRemediation" style="text-transform: none; font-size: 1rem;"><i class="fas fa-robot me-2 text-primary"></i>Enable AI Remediation Suggestions</label>
+                                        <div class="form-text mt-0">Automatically generate fix advice using Gemma LLM for discovered vulnerabilities.</div>
+                                    </div>
+                                    <input class="form-check-input ms-3 fs-4" type="checkbox" name="enable_ai_remediation" id="aiRemediation" {% if settings.enable_ai_remediation %}checked{% endif %}>
+                                </div>
+                            </div>
+                            
+                            <div class="p-4 mb-4 rounded-3 border border-secondary border-opacity-25" style="background: rgba(0,0,0,0.2);">
+                                <label class="form-label text-white"><i class="fas fa-satellite-dish me-2 text-primary"></i>Global Webhook URL</label>
+                                <input type="url" name="webhook_url" class="form-control mt-2" value="{{ settings.webhook_url|default:'' }}" placeholder="https://hooks.slack.com/services/...">
+                                <div class="form-text">Used for dispatching real-time discovery events to your SOC.</div>
+                            </div>
+                            
+                            <div class="mt-5 pt-3 border-top border-secondary border-opacity-25 text-end">
+                                <button type="submit" class="btn btn-primary px-5 py-2 text-uppercase tracking-widest small fw-bold"><i class="fas fa-save me-2"></i>Apply Preferences</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Integrations -->
+                <div class="tab-pane fade" id="integration" role="tabpanel">
+                    <div class="glass-panel p-5 mb-4">
+                        <div class="d-flex align-items-center mb-4">
+                            <i class="fas fa-network-wired fa-2x text-warning me-3"></i>
+                            <div>
+                                <h4 class="fw-bold mb-0 text-white">External Tool Integrations</h4>
+                                <p class="text-white-50 small mb-0 mt-1">Connect third-party scanning engines</p>
+                            </div>
+                        </div>
+                        
+                        <hr class="border-secondary opacity-25 mb-4">
+                        
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="integration">
+                            
+                            <h6 class="text-white fw-bold mb-3"><i class="fas fa-spider text-primary me-2"></i>OWASP ZAP Engine</h6>
+                            
+                            <div class="row g-4 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label">Authentication Token (API Key)</label>
+                                    <input type="password" name="zap_api_key" class="form-control" value="{{ settings.zap_api_key }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Target Daemon URL</label>
+                                    <input type="text" name="zap_proxy_url" class="form-control" value="{{ settings.zap_proxy_url }}" placeholder="http://localhost:8080">
+                                </div>
+                            </div>
+                            <div class="mt-4 text-end">
+                                <button type="submit" class="btn btn-primary px-5 py-2 text-uppercase tracking-widest small fw-bold"><i class="fas fa-sync me-2"></i>Sync Configuration</button>
+                            </div>
+                        </form>
+                    </div>
+                    
+                    <div class="glass-panel p-5 position-relative overflow-hidden border-info border-opacity-25" style="background: rgba(14, 165, 233, 0.05);">
+                        <div class="position-absolute top-0 end-0 p-4 opacity-25">
+                            <i class="fas fa-key fa-6x text-info"></i>
+                        </div>
+                        <div class="position-relative z-1 d-flex flex-column align-items-start">
+                            <h5 class="fw-bold text-white mb-2"><i class="fas fa-shield-alt text-info me-2"></i>Primary Access Token</h5>
+                            <p class="small text-white-50 mb-4 w-75">Deploy this key inside your CI/CD pipelines or external agents to execute remote API calls and ingest vulnerability data.</p>
+                            
+                            <div class="d-flex align-items-center w-100 gap-3">
+                                <code class="form-control font-monospace border-info border-opacity-25 bg-dark text-info fs-6 py-3 readonly" style="cursor: text;">{{ user.api_key }}</code>
+                                <button class="btn btn-outline-info py-3 px-4" title="Copy to clipboard" onclick="navigator.clipboard.writeText('{{ user.api_key }}')">
+                                    <i class="fas fa-clipboard"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notifications -->
+                <div class="tab-pane fade" id="notifications" role="tabpanel">
+                    <div class="glass-panel p-5">
+                        <div class="d-flex align-items-center mb-4">
+                            <i class="fas fa-satellite fa-2x text-success me-3"></i>
+                            <div>
+                                <h4 class="fw-bold mb-0 text-white">Alerting Rules</h4>
+                                <p class="text-white-50 small mb-0 mt-1">Configure event triggers and delivery paths</p>
+                            </div>
+                        </div>
+                        
+                        <hr class="border-secondary opacity-25 mb-4">
+                        
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="action" value="notifications">
+                            
+                            <div class="p-4 mb-4 rounded-3 border border-secondary border-opacity-25 shadow-sm" style="background: rgba(0,0,0,0.2);">
+                                <div class="form-check form-switch p-0 d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <label class="form-check-label fw-bold d-block text-white mb-1" for="emailNotif" style="text-transform: none; font-size: 1rem;"><i class="fas fa-envelope-open-text me-2 text-primary"></i>Email Reports</label>
+                                        <span class="small text-white-50">Dispatch comprehensive security summaries and critical severity alerts directly to your inbox.</span>
+                                    </div>
+                                    <input class="form-check-input ms-0 fs-4" type="checkbox" name="email_notifications" id="emailNotif" {% if settings.email_notifications %}checked{% endif %}>
+                                </div>
+                            </div>
+                            
+                            <div class="p-4 mb-4 rounded-3 border border-secondary border-opacity-25 shadow-sm" style="background: rgba(0,0,0,0.2);">
+                                <div class="form-check form-switch p-0 d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <label class="form-check-label fw-bold d-block text-white mb-1" for="scanAlert" style="text-transform: none; font-size: 1rem;"><i class="fas fa-radar me-2 text-primary"></i>Telemetry Alerts</label>
+                                        <span class="small text-white-50">Acknowledge completion of asynchronous scan phases and engine fulfillment immediately.</span>
+                                    </div>
+                                    <input class="form-check-input ms-0 fs-4" type="checkbox" name="scan_complete_alerts" id="scanAlert" {% if settings.scan_complete_alerts %}checked{% endif %}>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-5 pt-3 border-top border-secondary border-opacity-25 text-end">
+                                <button type="submit" class="btn btn-primary px-5 py-2 text-uppercase tracking-widest small fw-bold"><i class="fas fa-save me-2"></i>Update Alert Params</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

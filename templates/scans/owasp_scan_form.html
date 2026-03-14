@@ -3,26 +3,92 @@
 
 {% block title %}Start OWASP Scan - VulnVision{% endblock %}
 
+{% block extra_css %}
+<style>
+.glass-panel {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+}
+.glass-panel::before {
+    content: '';
+    position: absolute;
+    top: -50px; left: -50px;
+    width: 200px; height: 200px;
+    background: rgba(139, 92, 246, 0.15); /* Purple tint for OWASP */
+    filter: blur(60px);
+    z-index: 0;
+}
+.form-control, .form-select {
+    background: rgba(15, 23, 42, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+}
+.form-control:focus, .form-select:focus {
+    border-color: rgba(139, 92, 246, 0.5) !important;
+    box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.3) !important;
+    background: rgba(15, 23, 42, 0.9) !important;
+}
+label {
+    color: #94a3b8 !important;
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+.form-text {
+    color: #64748b !important;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-sm border-0 rounded-4">
-                <div class="card-header bg-primary text-white p-4 rounded-top-4">
-                    <h4 class="fw-bold mb-0">Launch OWASP Top 10 Scan</h4>
-                    <p class="text-white-50 small mb-0 mt-1">Full automated web assessment using ZAP Active Scanning</p>
-                </div>
-                <div class="card-body p-4">
-                    <div class="alert alert-info border-0 rounded-3 mb-4 small">
-                        <i class="fas fa-info-circle me-2"></i> This scan includes spidering and active vulnerability tests. It may take several minutes depending on the size of the target application.
+<div class="container py-5">
+    <div class="row w-100 justify-content-center">
+        <div class="col-md-9 col-lg-7">
+            
+            <div class="glass-panel my-4 border-warning border-opacity-25" style="border-radius: 12px; background: rgba(245, 158, 11, 0.05);">
+                <div class="p-4 d-flex align-items-center position-relative" style="z-index: 1;">
+                    <i class="fas fa-exclamation-triangle fa-2x text-warning me-3"></i>
+                    <div>
+                        <h6 class="fw-bold text-warning mb-1 text-uppercase tracking-widest small">Active Scan Warning</h6>
+                        <span class="text-white-50 small">This scan includes spidering and active vulnerability tests. It may take several minutes depending on the size of the target application.</span>
                     </div>
+                </div>
+            </div>
+
+            <div class="glass-panel my-4">
+                <div class="p-5 position-relative" style="z-index: 1;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="d-inline-block position-relative me-3">
+                            <div class="position-absolute top-50 start-50 translate-middle" style="width: 50px; height: 50px; background: rgba(139, 92, 246, 0.2); filter: blur(15px); border-radius: 50%;"></div>
+                            <i class="fas fa-spider fa-2x position-relative" style="color: #a78bfa; text-shadow: 0 0 20px rgba(139, 92, 246, 0.5);"></i>
+                        </div>
+                        <div>
+                            <h3 class="fw-bold text-white mb-0" style="font-size: 1.8rem;">Launch OWASP Top 10 Scan</h3>
+                            <p class="text-white-50 small tracking-widest text-uppercase mb-0 mt-1" style="color: #a78bfa !important;">Full automated web assessment using ZAP Active Scanning</p>
+                        </div>
+                    </div>
+                    
+                    <hr class="border-secondary opacity-25 mb-4">
                     
                     <form method="post">
                         {% csrf_token %}
-                        {{ form|crispy }}
+                        <div class="mb-5">
+                            {{ form|crispy }}
+                        </div>
                         
-                        <div class="d-grid mt-4">
-                            <button type="submit" class="btn btn-primary btn-lg rounded-pill p-3 fw-bold">
+                        <div class="d-flex justify-content-end gap-3 pt-4 border-top border-secondary border-opacity-25">
+                            <a href="{% url 'scans:owasp_scan_list' %}" class="btn btn-outline-secondary px-4 py-3 text-uppercase tracking-widest small fw-bold" style="border-radius: 8px;">Cancel</a>
+                            <button type="submit" class="btn px-5 py-3 text-uppercase tracking-widest small fw-bold shadow-lg position-relative" style="background: rgba(139, 92, 246, 0.8); border: 1px solid rgba(139, 92, 246, 1); color: #fff; border-radius: 8px; overflow: hidden; transition: all 0.3s;">
+                                <div class="position-absolute top-0 start-0 w-100 h-100 bg-white opacity-25" style="transform: skew(-20deg) translateX(-150%); transition: transform 0.5s;"></div>
                                 <i class="fas fa-rocket me-2"></i>Initialize Deep Scan
                             </button>
                         </div>
@@ -31,7 +97,7 @@
             </div>
             
             <div class="mt-4 text-center">
-                <a href="{% url 'scans:owasp_scan_list' %}" class="btn btn-link link-secondary text-decoration-none small">
+                <a href="{% url 'scans:owasp_scan_list' %}" class="btn btn-link link-secondary text-decoration-none small transition-colors hover:text-white">
                     <i class="fas fa-arrow-left me-1"></i> Back to OWASP Dashboard
                 </a>
             </div>

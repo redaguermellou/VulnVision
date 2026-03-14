@@ -1,0 +1,109 @@
+{% extends "reports/base_report.html" %}
+
+{% block toc_items %}
+<div class="toc-item"><a href="#exec-summary">1. Executive Summary</a> <span></span></div>
+<div class="toc-item"><a href="#methodology">2. Assessment Methodology</a> <span></span></div>
+<div class="toc-item"><a href="#findings-summary">3. Findings Summary</a> <span></span></div>
+<div class="toc-item"><a href="#detailed-findings">4. Detailed Technical Findings</a> <span></span></div>
+<div class="toc-item"><a href="#remediation-plan">5. Remediation Plan</a> <span></span></div>
+<div class="toc-item"><a href="#appendix">6. Appendix</a> <span></span></div>
+{% endblock %}
+
+{% block content %}
+
+<h1 id="exec-summary">1. Executive Summary</h1>
+<p>This technical vulnerability assessment was conducted by the VulnVision platform to identify security weaknesses and misconfigurations in the target systems. The assessment detected a total of <strong>{{ total_count }}</strong> vulnerabilities.</p>
+<p>The severity breakdown is as follows:</p>
+<ul>
+    <li>Critical: {{ critical_count }}</li>
+    <li>High: {{ high_count }}</li>
+    <li>Medium: {{ medium_count }}</li>
+    <li>Low: {{ low_count }}</li>
+    <li>Info: {{ info_count }}</li>
+</ul>
+
+<div class="page-break"></div>
+<h1 id="methodology">2. Assessment Methodology</h1>
+<p>The assessment utilized a combination of automated scanning tools (Nmap, Nikto, Gobuster, OWASP ZAP) and proprietary analysis engines. The process includes:</p>
+<ol>
+    <li>Asset Discovery and Footprinting</li>
+    <li>Port Scanning and Service Enumeration</li>
+    <li>Vulnerability Scanning and Identification</li>
+    <li>Risk Rating using CVSS (Common Vulnerability Scoring System) standards</li>
+</ol>
+
+<h1 id="findings-summary">3. Findings Summary</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Severity</th>
+            <th>Vulnerability Title</th>
+            <th>Component / Endpoint</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for vuln in vulnerabilities|slice:":20" %}
+        <tr>
+            <td><span class="badge badge-{{ vuln.severity }}">{{ vuln.get_severity_display }}</span></td>
+            <td>{{ vuln.title }}</td>
+            <td>{{ vuln.component|truncatechars:50|default:"N/A" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="3">No vulnerabilities found matching the current filters.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% if vulnerabilities.count > 20 %}
+<p><em>Showing the top 20 most severe vulnerabilities in the summary table. See detailed findings for all identified issues.</em></p>
+{% endif %}
+
+<div class="page-break"></div>
+<h1 id="detailed-findings">4. Detailed Technical Findings</h1>
+{% for vuln in vulnerabilities %}
+<div class="vuln-box {{ vuln.severity }}">
+    <h3 style="margin-top:0;">{{ vuln.title }} <span class="badge badge-{{ vuln.severity }}" style="float:right;">{{ vuln.get_severity_display }}</span></h3>
+    <p><strong>Target:</strong> {{ vuln.target.name|default:"Unknown" }}</p>
+    <p><strong>Component:</strong> {{ vuln.component|default:"Not specific" }}</p>
+    {% if vuln.cve_id %}
+    <p><strong>CVE:</strong> {{ vuln.cve_id }} | <strong>CVSS Score:</strong> {{ vuln.cvss_score|default:"N/A" }}</p>
+    {% endif %}
+    {% if vuln.cwe_id %}
+    <p><strong>CWE:</strong> {{ vuln.cwe_id }} - {{ vuln.cwe_category|default:"" }}</p>
+    {% endif %}
+    
+    <h4>Description:</h4>
+    <p>{{ vuln.description|linebreaksbr }}</p>
+
+    {% if vuln.evidence %}
+    <h4>Technical Evidence / Payload:</h4>
+    <pre>{{ vuln.evidence|truncatechars:1000 }}</pre>
+    {% endif %}
+
+    <h4>Remediation Guidance:</h4>
+    <p>{{ vuln.remediation|linebreaksbr|default:"No specific remediation provided. Standard security best practices apply." }}</p>
+</div>
+{% empty %}
+<p>No actionable technical findings match this report's constraints.</p>
+{% endfor %}
+
+<div class="page-break"></div>
+<h1 id="remediation-plan">5. Remediation Plan</h1>
+<p>Addressing the findings should follow a risk-based approach, prioritizing Critical and High severity issues. We recommend the following steps:</p>
+<ol>
+    <li>Patch systems and applications affected by the known CVEs immediately.</li>
+    <li>Ensure all unnecessary open ports and services are blocked or disabled.</li>
+    <li>Apply secure configuration baselines to web servers and database systems.</li>
+    <li>Re-run the VulnVision scan to verify remediation effectiveness.</li>
+</ol>
+
+<div class="page-break"></div>
+<h1 id="appendix">6. Appendix</h1>
+<p><strong>Terms and Definitions:</strong></p>
+<ul>
+    <li><strong>Critical:</strong> Immediate threat to system integrity, confidentiality, or availability. Exploitation is usually easy and requires no user interaction.</li>
+    <li><strong>High:</strong> Significant risk of exploitation. May require some prerequisites but can lead to severe data compromise or system control.</li>
+    <li><strong>Medium:</strong> Flaws that could potentially be exploited, often requiring a complex scenario or prior authentication.</li>
+    <li><strong>Low:</strong> Informational issues, minor misconfigurations, or theoretical weaknesses requiring exceptional circumstances to exploit.</li>
+</ul>
+<p><em>Generated by VulnVision Automated Security Platform.</em></p>
+{% endblock %}

@@ -3,80 +3,94 @@
 {% block title %}Targets - VulnVision{% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold"><i class="fas fa-bullseye me-2 text-primary"></i>Targets</h2>
-        <div class="d-flex gap-2">
-            <a href="{% url 'targets:target_import' %}" class="btn btn-outline-success">
-                <i class="fas fa-file-import me-2"></i>Import CSV
+<div class="container-fluid py-4 position-relative">
+    <div class="d-flex justify-content-between align-items-center mb-5">
+        <div>
+            <div class="text-uppercase tracking-widest text-primary mb-2 small fw-bold" style="letter-spacing: 2px;"><i class="fas fa-network-wired me-2"></i>Infrastructure</div>
+            <h2 class="fw-bold mb-0" style="font-size: 2.2rem; background: linear-gradient(135deg, #fff 0%, #94a3b8 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">Target Management</h2>
+        </div>
+        <div class="d-flex gap-3">
+            <a href="{% url 'targets:target_import' %}" class="btn btn-outline-success shadow-sm d-flex align-items-center">
+                <i class="fas fa-file-import me-2"></i>Import
             </a>
-            <a href="{% url 'targets:target_export' %}" class="btn btn-outline-info">
-                <i class="fas fa-file-export me-2"></i>Export CSV
+            <a href="{% url 'targets:target_export' %}" class="btn btn-outline-info shadow-sm d-flex align-items-center">
+                <i class="fas fa-file-export me-2"></i>Export
             </a>
-            <a href="{% url 'targets:target_create' %}" class="btn btn-primary">
+            <a href="{% url 'targets:target_create' %}" class="btn btn-primary shadow-lg d-flex align-items-center px-4">
                 <i class="fas fa-plus me-2"></i>Add Target
             </a>
         </div>
     </div>
 
     <!-- Search and Filter -->
-    <div class="card border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <form method="get" class="row g-3">
-                <div class="col-md-6">
-                    <div class="input-group">
-                        <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                        <input type="text" name="q" class="form-control border-start-0" placeholder="Search by name or URL..." value="{{ request.GET.q }}">
+    <div class="glass-panel mb-5">
+        <div class="p-4 position-relative z-1">
+            <form method="get" class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <label class="small text-white-50 text-uppercase tracking-widest mb-2 fw-bold" style="font-size: 0.75rem;">Name/URL Search</label>
+                    <div class="input-group search-group shadow-sm">
+                        <span class="input-group-text glass-input-addon"><i class="fas fa-search text-white-50"></i></span>
+                        <input type="text" name="q" class="form-control glass-input" placeholder="Search targets..." value="{{ request.GET.q }}">
                     </div>
                 </div>
-                <div class="col-md-4">
-                    <input type="text" name="tag" class="form-control" placeholder="Filter by tag..." value="{{ request.GET.tag }}">
+                <div class="col-md-5">
+                    <label class="small text-white-50 text-uppercase tracking-widest mb-2 fw-bold" style="font-size: 0.75rem;">Tag Filter</label>
+                    <div class="input-group search-group shadow-sm">
+                        <span class="input-group-text glass-input-addon"><i class="fas fa-tag text-white-50"></i></span>
+                        <input type="text" name="tag" class="form-control glass-input" placeholder="Filter by tag..." value="{{ request.GET.tag }}">
+                    </div>
                 </div>
-                <div class="col-md-2 d-grid">
-                    <button type="submit" class="btn btn-outline-primary">Filter</button>
+                <div class="col-md-2 d-grid mt-auto">
+                    <button type="submit" class="btn btn-primary shadow-sm text-uppercase tracking-widest small fw-bold py-2" style="border-radius: 8px;">
+                        <i class="fas fa-filter me-2"></i>Filter
+                    </button>
                 </div>
             </form>
         </div>
     </div>
 
     <!-- Target Table -->
-    <div class="card border-0 shadow-sm">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
+    <div class="glass-panel overflow-hidden mb-4">
+        <div class="table-responsive z-1 position-relative">
+            <table class="table table-hover align-middle mb-0 text-white" style="--bs-table-bg: transparent; --bs-table-color: #f8fafc;">
+                <thead style="background: rgba(0, 0, 0, 0.2);">
                     <tr>
-                        <th>Target Name</th>
-                        <th>URL / IP</th>
-                        <th>Protocol</th>
-                        <th>Status</th>
-                        <th>Scans</th>
-                        <th>Actions</th>
+                        <th class="border-secondary border-opacity-10 py-3 ps-4 text-white-50 text-uppercase small tracking-widest fw-bold">Target Name</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">URL / IP</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">Protocol</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">Status</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">Scans</th>
+                        <th class="border-secondary border-opacity-10 py-3 pe-4 text-white-50 text-uppercase small tracking-widest fw-bold text-end">Actions</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody style="border-top: none;">
                     {% for target in targets %}
-                    <tr>
-                        <td>
-                            <div class="fw-bold text-dark">{{ target.name }}</div>
-                            <small class="text-muted">{{ target.description|truncatechars:50 }}</small>
+                    <tr style="transition: all 0.2s;">
+                        <td class="border-secondary border-opacity-25 py-3 ps-4">
+                            <div class="fw-bold text-white fs-5">{{ target.name }}</div>
+                            <small class="text-white-50">{{ target.description|truncatechars:50|default:"No description provided" }}</small>
                         </td>
-                        <td>
-                            <div class="small">{{ target.url }}</div>
+                        <td class="border-secondary border-opacity-25 py-3">
+                            <div class="text-info fw-bold font-monospace small"><i class="fas fa-link me-1 text-white-50"></i>{{ target.url }}</div>
                             {% if target.ip_address %}
-                            <div class="badge bg-light text-muted fw-normal">{{ target.ip_address }}</div>
+                            <div class="mt-1 small"><span class="badge bg-secondary bg-opacity-25 text-light border border-secondary border-opacity-25 fw-normal font-monospace"><i class="fas fa-network-wired me-1"></i>{{ target.ip_address }}</span></div>
                             {% endif %}
                         </td>
-                        <td><span class="badge bg-secondary text-uppercase">{{ target.protocol }}</span></td>
-                        <td>
+                        <td class="border-secondary border-opacity-25 py-3">
+                            <span class="badge bg-dark border border-secondary text-uppercase px-3 py-2 text-white-50 fw-bold">{{ target.protocol }}</span>
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3">
                             {% if target.is_active %}
-                            <span class="badge bg-success">Active</span>
+                            <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2"><i class="fas fa-check-circle me-1"></i>Active</span>
                             {% else %}
-                            <span class="badge bg-danger">Inactive</span>
+                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2"><i class="fas fa-times-circle me-1"></i>Inactive</span>
                             {% endif %}
                         </td>
-                        <td>{{ target.get_scan_count }}</td>
-                        <td>
-                            <div class="btn-group">
+                        <td class="border-secondary border-opacity-25 py-3">
+                            <span class="fw-bold fs-5">{{ target.get_scan_count }}</span>
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3 pe-4 text-end">
+                            <div class="btn-group shadow-sm">
                                 <a href="{% url 'targets:target_detail' target.pk %}" class="btn btn-sm btn-outline-info" title="View Details">
                                     <i class="fas fa-eye"></i>
                                 </a>
@@ -91,9 +105,13 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="6" class="text-center py-5 text-muted">
-                            <i class="fas fa-search fa-3x mb-3 opacity-25"></i>
-                            <p>No targets found. Start by adding a new one!</p>
+                        <td colspan="6" class="text-center py-5 text-white-50">
+                            <div class="py-4">
+                                <i class="fas fa-search fa-3x mb-4 text-white-50 opacity-50"></i>
+                                <h5 class="text-white">No targets found</h5>
+                                <p class="mb-4">Start by adding a new target to monitor its security posture.</p>
+                                <a href="{% url 'targets:target_create' %}" class="btn btn-primary">Add Your First Target</a>
+                            </div>
                         </td>
                     </tr>
                     {% endfor %}
@@ -104,19 +122,90 @@
 
     <!-- Pagination -->
     {% if is_paginated %}
-    <nav class="mt-4">
+    <nav class="mt-5">
         <ul class="pagination justify-content-center">
             {% if page_obj.has_previous %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}">Previous</a></li>
+            <li class="page-item"><a class="page-link bg-dark border-secondary text-primary" href="?page={{ page_obj.previous_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}">Previous</a></li>
             {% endif %}
             
-            <li class="page-item active"><span class="page-link">{{ page_obj.number }}</span></li>
+            <li class="page-item active"><span class="page-link bg-primary border-primary">{{ page_obj.number }}</span></li>
             
             {% if page_obj.has_next %}
-            <li class="page-item"><a class="page-link" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}">Next</a></li>
+            <li class="page-item"><a class="page-link bg-dark border-secondary text-primary" href="?page={{ page_obj.next_page_number }}{% if request.GET.q %}&q={{ request.GET.q }}{% endif %}{% if request.GET.tag %}&tag={{ request.GET.tag }}{% endif %}">Next</a></li>
             {% endif %}
         </ul>
     </nav>
     {% endif %}
 </div>
+
+<style>
+    .glass-panel {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        position: relative;
+    }
+    .glass-panel::before {
+        content: '';
+        position: absolute;
+        top: -50px; right: -50px;
+        width: 150px; height: 150px;
+        background: rgba(14, 165, 233, 0.1); /* light blue accent */
+        filter: blur(50px);
+        z-index: 0;
+        pointer-events: none;
+    }
+    
+    .glass-input {
+        background: rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-left: none !important;
+        color: #f8fafc !important;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s;
+    }
+    .glass-input::placeholder {
+        color: rgba(255, 255, 255, 0.4) !important;
+    }
+    .form-select.glass-input option {
+        color: #fff;
+        background: #0f172a;
+    }
+    
+    .glass-input-addon {
+        background: rgba(0, 0, 0, 0.3) !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+        border-right: none !important;
+        color: #94a3b8 !important;
+        padding-left: 1.25rem;
+        transition: all 0.3s;
+    }
+
+    .search-group:focus-within .glass-input,
+    .search-group:focus-within .glass-input-addon {
+        border-color: rgba(14, 165, 233, 0.5) !important;
+        background: rgba(15, 23, 42, 0.8) !important;
+    }
+    
+    .search-group:focus-within .glass-input {
+        box-shadow: inset 0 1px 1px rgba(0,0,0,0.075), 0 0 0 0.25rem rgba(14, 165, 233, 0.25) !important;
+    }
+
+    /* Table styles */
+    .table > :not(caption) > * > * {
+        background-color: transparent !important;
+        border-bottom-color: rgba(255,255,255,0.05);
+    }
+    
+    .table-hover tbody tr {
+        transition: background-color 0.2s ease;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.03) !important;
+    }
+</style>
 {% endblock %}

@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+
+{% block title %}My Reports - VulnVision{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-0">My Generated Reports</h2>
+            <p class="text-white-50 small">View, download, and manage your security reports.</p>
+        </div>
+        <div>
+            <a href="{% url 'scans:report_builder' %}" class="btn btn-primary d-inline-flex align-items-center">
+                <i class="fas fa-plus me-2"></i> New Report
+            </a>
+        </div>
+    </div>
+
+    <div class="glass-panel overflow-hidden mb-4 mt-5">
+        <div class="table-responsive z-1 position-relative">
+            <table class="table table-hover align-middle mb-0 text-white" style="--bs-table-bg: transparent; --bs-table-color: #f8fafc;">
+                <thead style="background: rgba(0, 0, 0, 0.2);">
+                    <tr>
+                        <th class="border-secondary border-opacity-10 py-3 ps-4 text-white-50 text-uppercase small tracking-widest fw-bold">Title</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">Type / Format</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">Status</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">Date Generated</th>
+                        <th class="border-secondary border-opacity-10 py-3 pe-4 text-white-50 text-uppercase small tracking-widest fw-bold text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody style="border-top: none;">
+                    {% for report in reports %}
+                    <tr>
+                        <td class="border-secondary border-opacity-25 py-3 ps-4 fw-bold fs-6 text-white">
+                            {{ report.title|truncatechars:40 }}
+                            {% if report.filters.target_id %}
+                                <div class="small fw-normal text-info font-monospace mt-1"><i class="fas fa-bullseye me-1 text-white-50"></i>Target Included</div>
+                            {% endif %}
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3">
+                            <span class="badge border border-secondary text-uppercase px-3 py-2 text-white-50 fw-bold" style="background: rgba(15, 23, 42, 0.8);">{{ report.get_report_type_display }}</span>
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3">
+                            {% if report.status == 'completed' %}
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-3 py-2 rounded-pill"><i class="fas fa-check-circle me-1"></i>Completed</span>
+                            {% elif report.status == 'generating' %}
+                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 px-3 py-2 rounded-pill"><i class="fas fa-cog fa-spin me-1"></i>Generating</span>
+                            {% elif report.status == 'failed' %}
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-3 py-2 rounded-pill" title="{{ report.error_message }}"><i class="fas fa-times-circle me-1"></i>Failed</span>
+                            {% else %}
+                                <span class="badge bg-secondary bg-opacity-10 text-white-50 border border-secondary border-opacity-25 px-3 py-2 rounded-pill"><i class="fas fa-clock me-1"></i>Pending</span>
+                            {% endif %}
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3 text-white-50 font-monospace small">
+                            <i class="far fa-calendar-alt me-1"></i>{{ report.created_at|date:"M j, Y, H:i" }}
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3 pe-4 text-end">
+                            {% if report.status == 'completed' and report.pdf_file %}
+                            <a href="{% url 'scans:report_download' report.id %}" class="btn btn-sm btn-outline-success shadow-sm rounded-pill px-3">
+                                <i class="fas fa-download me-1"></i> Download
+                            </a>
+                            {% else %}
+                            <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 opacity-50" disabled>
+                                <i class="fas fa-download me-1"></i> Download
+                            </button>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5">
+                            <div class="py-4 text-white-50">
+                                <i class="fas fa-file-pdf fa-3x mb-4 text-danger opacity-50" style="filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.3));"></i>
+                                <h5 class="fw-bold text-white">No reports generated yet</h5>
+                                <p class="small mb-4">Use the report builder to generate your first PDF report.</p>
+                                <a href="{% url 'scans:report_builder' %}" class="btn btn-primary rounded-pill px-4">Initialize Report Engine</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            </li>
+            {% endif %}
+            
+            <li class="page-item active"><a class="page-link" href="#">Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</a></li>
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">Next</a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+<style>
+    .glass-panel {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        position: relative;
+    }
+    .glass-panel::before {
+        content: '';
+        position: absolute;
+        top: -50px; left: -50px;
+        width: 150px; height: 150px;
+        background: rgba(239, 68, 68, 0.1); /* light red accent */
+        filter: blur(50px);
+        z-index: 0;
+        pointer-events: none;
+    }
+    
+    /* Table styles */
+    .table > :not(caption) > * > * {
+        background-color: transparent !important;
+        border-bottom-color: rgba(255,255,255,0.05);
+    }
+    
+    .table-hover tbody tr {
+        transition: background-color 0.2s ease;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.03) !important;
+    }
+</style>
+{% endblock %}

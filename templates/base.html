@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,45 +9,222 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- FontAwesome styling for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
     {% block extra_css %}{% endblock %}
-    <style>
+<style>
+        :root {
+            --vt-bg: #050510;
+            --vt-surface: rgba(22, 27, 34, 0.7);
+            --vt-primary: #3b82f6;
+            --vt-primary-glow: rgba(59, 130, 246, 0.5);
+            --vt-accent: #8b5cf6;
+            --vt-text: #f8fafc;
+            --vt-text-white-50: #94a3b8;
+            --vt-border: rgba(255, 255, 255, 0.1);
+            
+            --vt-success: #10b981;
+            --vt-warning: #f59e0b;
+            --vt-danger: #ef4444;
+            --vt-info: #0ea5e9;
+            --vt-glass-bg: rgba(15, 23, 42, 0.6);
+            --vt-glass-border: rgba(255, 255, 255, 0.05);
+
+            --bs-font-sans-serif: 'Inter', system-ui, -apple-system, sans-serif;
+            --bs-font-monospace: 'JetBrains Mono', monospace;
+        }
+
         body {
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            background-color: #f8f9fa;
+            background: linear-gradient(135deg, #020617 0%, #0f172a 100%);
+            color: var(--vt-text);
+            font-family: var(--bs-font-sans-serif);
+            overflow-x: hidden;
+            background-attachment: fixed;
         }
-        .main-wrapper {
-            flex: 1;
-            display: flex;
+
+        /* Top Nav */
+        .navbar {
+            background: rgba(15, 23, 42, 0.8) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--vt-border);
+            padding: 1rem 0;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            z-index: 1000;
         }
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.5rem;
+            letter-spacing: -0.5px;
+            color: var(--vt-text);
+            text-transform: uppercase;
+        }
+        .navbar-brand span {
+            background: linear-gradient(to right, #3b82f6, #8b5cf6);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Container & Layout */
+        .main-wrapper { flex: 1; display: flex; position: relative; }
+        
         .sidebar {
-            width: 250px;
-            background-color: #212529;
-            color: #fff;
+            width: 260px;
+            background: rgba(15, 23, 42, 0.5);
+            backdrop-filter: blur(10px);
+            border-right: 1px solid var(--vt-border);
             min-height: 100%;
+            padding-top: 2rem;
+            z-index: 10;
         }
         .sidebar .nav-link {
-            color: rgba(255,255,255,.75);
+            color: var(--vt-text-white-50);
+            font-weight: 500;
+            padding: 0.8rem 1.25rem;
+            margin: 0.3rem 1rem;
+            border-radius: 8px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        .sidebar .nav-link:hover, .sidebar .nav-link.active {
+        .sidebar .nav-link:hover {
+            color: var(--vt-text);
+            background: rgba(255, 255, 255, 0.05);
+            transform: translateX(4px);
+        }
+        .sidebar .nav-link.active {
             color: #fff;
-            background-color: rgba(255,255,255,.1);
-            border-radius: 4px;
+            background: linear-gradient(90deg, rgba(59, 130, 246, 0.2) 0%, transparent 100%);
+            border-left: 3px solid var(--vt-primary);
+            box-shadow: inset 2px 0 10px rgba(59, 130, 246, 0.1);
         }
-        .content-area {
-            flex: 1;
-            padding: 2.5rem;
+        .sidebar .nav-link i {
+            transition: transform 0.3s ease;
         }
+        .sidebar .nav-link:hover i {
+            transform: scale(1.1);
+            color: var(--vt-primary);
+        }
+
+        .content-area { flex: 1; padding: 2.5rem; position: relative; z-index: 1; }
+        .content-area::before {
+            content: '';
+            position: absolute;
+            top: 10%;
+            left: 20%;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(59,130,246,0.1) 0%, rgba(0,0,0,0) 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        /* General Card Design */
+        .card { 
+            background: var(--vt-glass-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--vt-border);
+            border-radius: 16px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: var(--vt-text);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+        }
+        .card:hover {
+            border-color: rgba(255, 255, 255, 0.2);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+            transform: translateY(-2px);
+        }
+        .card-header {
+            background: rgba(255, 255, 255, 0.02);
+            border-bottom: 1px solid var(--vt-border);
+        }
+
+        /* Buttons */
+        .btn {
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            letter-spacing: 0.3px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--vt-primary) 0%, var(--vt-accent) 100%);
+            border: none;
+            color: #fff;
+            padding: 0.6rem 1.2rem;
+            box-shadow: 0 4px 14px 0 var(--vt-primary-glow);
+        }
+        .btn-primary:hover {
+            background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+            color: #fff;
+        }
+        .btn-outline-primary {
+            border: 1px solid rgba(59, 130, 246, 0.5);
+            color: var(--vt-primary);
+            background: rgba(59, 130, 246, 0.05);
+        }
+        .btn-outline-primary:hover {
+            background: var(--vt-primary);
+            color: #fff;
+            box-shadow: 0 4px 14px 0 var(--vt-primary-glow);
+            transform: translateY(-1px);
+        }
+        
+        /* Shared Severity Badges */
+        .badge { font-weight: 600; padding: 0.4em 0.8em; border-radius: 6px; letter-spacing: 0.5px; }
+        .badge-critical, .badge-danger { color: var(--vt-danger); background-color: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-high, .badge-warning { color: var(--vt-warning); background-color: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-medium { color: var(--vt-warning); background-color: rgba(245, 158, 11, 0.1); border: 1px solid rgba(245, 158, 11, 0.2); }
+        .badge-low, .badge-success { color: var(--vt-success); background-color: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-info { color: var(--vt-info); background-color: rgba(14, 165, 233, 0.15); border: 1px solid rgba(14, 165, 233, 0.3); }
+        
+        /* Loading Skeleton */
+        .skeleton {
+            background: linear-gradient(90deg, rgba(255,255,255,0.05) 25%, rgba(255,255,255,0.1) 50%, rgba(255,255,255,0.05) 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+            border-radius: 8px;
+        }
+        @keyframes skeleton-loading {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        /* Glass Toasts */
+        .toast-container { position: fixed; top: 1.5rem; right: 1.5rem; z-index: 1060; }
+        .toast {
+            background: rgba(15, 23, 42, 0.85) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--vt-border) !important;
+            color: var(--vt-text) !important;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        }
+        .toast-header {
+            background: transparent !important;
+            color: var(--vt-text) !important;
+            border-bottom: 1px solid var(--vt-border);
+            border-radius: 12px 12px 0 0;
+            padding: 0.75rem 1rem;
+        }
+        .toast-body { padding: 1rem; }
     </style>
 </head>
-<body>
+<body class="{% if not user.is_authenticated and request.path == '/' %}landing-page{% endif %}">
 
     <!-- Navigation Bar -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow">
         <div class="container-fluid">
-            <a class="navbar-brand fw-bold" href="/">
-                <i class="fas fa-shield-alt text-danger me-2"></i>VulnVision
+            <a class="navbar-brand fw-bold d-flex align-items-center" href="/">
+                <!-- Replace with an icon or simple text representing the logo -->
+                <i class="fas fa-shield-alt text-primary me-2"></i>
+                Vuln<span>Vision</span>
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
@@ -82,25 +260,25 @@
         <aside class="sidebar p-3 d-none d-md-block shadow-sm">
             <ul class="nav flex-column gap-2 mt-2">
                 <li class="nav-item">
-                    <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{% url 'home' %}"><i class="fas fa-chart-line me-2"></i> Dashboard</a>
+                    <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{% url 'home' %}"><i class="fas fa-home me-2"></i> Dashboard</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'targets' in request.path %}active{% endif %}" href="{% url 'targets:target_list' %}"><i class="fas fa-bullseye me-2"></i> Targets</a>
+                    <a class="nav-link {% if 'targets' in request.path %}active{% endif %}" href="{% url 'targets:target_list' %}"><i class="fas fa-crosshairs me-2"></i> Targets</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'vulnerability-stats' in request.path %}active{% endif %}" href="{% url 'scans:vulnerability_stats' %}"><i class="fas fa-chart-pie me-2"></i> Analytics</a>
+                    <a class="nav-link {% if 'scans' in request.path and not 'stats' in request.path and not 'trends' in request.path and not 'report' in request.path and not 'owasp' in request.path %}active{% endif %}" href="{% url 'scans:scan_list' %}"><i class="fas fa-search me-2"></i> Scans</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'trends' in request.path %}active{% endif %}" href="{% url 'scans:trends' %}"><i class="fas fa-chart-line me-2"></i> Trends</a>
+                    <a class="nav-link {% if 'vulnerability' in request.path %}active{% endif %}" href="{% url 'scans:vulnerability_stats' %}"><i class="fas fa-bug me-2"></i> Vulnerabilities</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'report-builder' in request.path %}active{% endif %}" href="{% url 'scans:report_builder' %}"><i class="fas fa-file-alt me-2"></i> Reports</a>
+                    <a class="nav-link {% if 'ai' in request.path %}active{% endif %}" href="{% url 'ai_assistant:chat' %}"><i class="fas fa-robot me-2 text-primary"></i> AI Assistant</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if 'owasp' in request.path %}active{% endif %}" href="{% url 'scans:owasp_scan_list' %}"><i class="fas fa-shield-alt me-2"></i> OWASP Top 10</a>
+                    <a class="nav-link {% if 'report' in request.path %}active{% endif %}" href="{% url 'scans:report_builder' %}"><i class="fas fa-file-pdf me-2"></i> Reports</a>
                 </li>
-                <li class="nav-item mt-auto pt-4">
-                    <a class="nav-link" href="#"><i class="fas fa-cog me-2"></i> Settings</a>
+                <li class="nav-item pt-4 mt-auto">
+                    <a class="nav-link {% if 'settings' in request.path %}active{% endif %}" href="{% url 'settings' %}"><i class="fas fa-cog me-2"></i> Settings</a>
                 </li>
             </ul>
         </aside>
@@ -108,34 +286,45 @@
 
         <!-- Content Area -->
         <main class="content-area container-fluid">
-            <!-- Messages Notification Area -->
-            {% if messages %}
-                <div class="mt-2 mb-4">
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }} alert-dismissible fade show shadow-sm" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    {% endfor %}
-                </div>
-            {% endif %}
+            <!-- Messages Notification Area (Now Handled by Toasts below) -->
 
             <!-- Dynamic Block Content (Injected by child templates) -->
-            <div>
-                {% block content %}
-                    <div class="card border-0 shadow-sm border-top border-danger border-3">
-                        <div class="card-body p-4">
-                            <h4 class="card-title fw-bold text-dark mb-3">Welcome System Setup</h4>
-                            <p class="card-text text-muted">The VulnVision architecture is fully deployed and operational.</p>
-                        </div>
-                    </div>
-                {% endblock %}
-            </div>
+            <!-- Dynamic Block Content (Injected by child templates) -->
+            {% block content %}
+            {% endblock %}
         </main>
     </div>
 
     <!-- Bootstrap 5 JS functionality bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="toast align-items-center text-bg-{{ message.tags|default:'primary' }} border-0 mb-2" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="fas fa-info-circle me-2"></i> {{ message }}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                </div>
+            {% endfor %}
+        {% endif %}
+    </div>
+
+    <!-- Initialize Toasts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var toastElList = [].slice.call(document.querySelectorAll('.toast'));
+            var toastList = toastElList.map(function (toastEl) {
+                return new bootstrap.Toast(toastEl, { delay: 4000 });
+            });
+            toastList.forEach(toast => toast.show());
+        });
+    </script>
+
     {% block extra_js %}{% endblock %}
 </body>
 </html>

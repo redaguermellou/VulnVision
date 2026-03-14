@@ -2,34 +2,96 @@
 
 {% block title %}Scan Details - VulnVision{% endblock %}
 
+{% block extra_css %}
+<style>
+    .severity-card {
+        border-radius: 16px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        position: relative;
+        overflow: hidden;
+    }
+    .severity-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; width: 4px; height: 100%;
+    }
+    .severity-card:hover {
+        transform: translateY(-5px);
+        background: rgba(30, 41, 59, 0.6);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+    .sev-critical::before { background: var(--vt-danger); }
+    .sev-critical { color: var(--vt-danger); background: linear-gradient(135deg, rgba(248, 81, 73, 0.1), transparent); }
+    .sev-high::before { background: var(--vt-warning); }
+    .sev-high { color: var(--vt-warning); background: linear-gradient(135deg, rgba(240, 136, 62, 0.1), transparent); }
+    .sev-medium::before { background: #f59e0b; }
+    .sev-medium { color: #f59e0b; background: linear-gradient(135deg, rgba(245, 158, 11, 0.1), transparent); }
+    .sev-low::before { background: var(--vt-success); }
+    .sev-low { color: var(--vt-success); background: linear-gradient(135deg, rgba(45, 164, 78, 0.1), transparent); }
+    
+    .nav-tabs .nav-link {
+        color: #94a3b8;
+        border: none;
+        border-bottom: 2px solid transparent;
+        padding: 1rem 1.5rem;
+        background: transparent;
+        transition: all 0.2s;
+    }
+    .nav-tabs .nav-link:hover { color: #fff; border-color: transparent; background: rgba(255,255,255,0.02); }
+    .nav-tabs .nav-link.active {
+        color: var(--vt-primary);
+        background: transparent;
+        border-color: transparent transparent var(--vt-primary) transparent;
+        text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    }
+    
+    .table { color: #e2e8f0; }
+    .table-light { background: rgba(255, 255, 255, 0.03) !important; color: #94a3b8; }
+    .table-hover tbody tr:hover { background: rgba(255, 255, 255, 0.02) !important; color: #fff; cursor: pointer; }
+    .table td, .table th { border-color: rgba(255,255,255,0.05); background: transparent !important; }
+
+    .glass-panel {
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 position-relative">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-5">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
-                    <li class="breadcrumb-item"><a href="{% url 'scans:scan_list' %}">Scans</a></li>
-                    <li class="breadcrumb-item active">{{ scan.name }}</li>
+                <ol class="breadcrumb mb-2 font-monospace small">
+                    <li class="breadcrumb-item"><a href="{% url 'scans:scan_list' %}" class="text-white-50 text-decoration-none">Scans</a></li>
+                    <li class="breadcrumb-item active text-primary">{{ scan.name }}</li>
                 </ol>
             </nav>
-            <h2 class="fw-bold mb-0">{{ scan.name }}</h2>
-            <div class="d-flex align-items-center gap-2 mt-1">
-                <span class="badge border bg-light text-dark">{{ scan.get_scan_type_display }}</span>
-                <span class="text-muted small">Target: <strong>{{ scan.target.name }}</strong> ({{ scan.target.url }})</span>
+            <h2 class="fw-bold mb-0" style="font-size: 2.2rem; background: linear-gradient(135deg, #fff 0%, #94a3b8 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">{{ scan.name }}</h2>
+            <div class="d-flex align-items-center gap-2 mt-2">
+                <span class="badge border border-secondary text-uppercase px-2 py-1 text-white-50 fw-bold" style="background: rgba(15, 23, 42, 0.8);">{{ scan.get_scan_type_display }}</span>
+                <span class="text-white-50 small">Target: <a href="{% url 'targets:target_detail' scan.target.pk %}" class="text-info text-decoration-none fw-bold"><i class="fas fa-crosshairs me-1"></i>{{ scan.target.name }}</a> (<span class="font-monospace text-white-50">{{ scan.target.url }}</span>)</span>
             </div>
         </div>
         
-        <div class="d-flex gap-2">
+        <div class="d-flex gap-2 shadow-sm">
             {% if scan.status == 'running' %}
             <form action="{% url 'scans:scan_stop' scan.pk %}" method="post">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-warning"><i class="fas fa-stop me-2"></i>Stop Scan</button>
+                <button type="submit" class="btn btn-outline-warning"><i class="fas fa-stop me-2"></i>Abort Scan</button>
             </form>
             {% elif scan.status != 'completed' %}
             <form action="{% url 'scans:scan_run' scan.pk %}" method="post">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-primary"><i class="fas fa-play me-2"></i>Run Scan</button>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-bolt me-2"></i>Execute Scan</button>
             </form>
             {% endif %}
             <a href="{% url 'scans:scan_delete' scan.pk %}" class="btn btn-outline-danger"><i class="fas fa-trash me-2"></i>Delete</a>
@@ -37,103 +99,107 @@
     </div>
 
     <!-- Status & Counters -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm p-4 h-100 text-center">
-                <div class="text-muted small text-uppercase fw-bold mb-2">Scan Status</div>
-                <div id="scan-status-text" class="h4 fw-bold mb-0">
+    <div class="row g-4 mb-5">
+        <div class="col-xl-3">
+            <div class="severity-card p-4 h-100 text-center d-flex flex-column justify-content-center">
+                <div class="text-white-50 small text-uppercase fw-bold mb-2 tracking-widest" style="letter-spacing: 2px;">Operation Status</div>
+                <div id="scan-status-text" class="h4 fw-bold mb-0 mt-2">
                     {% if scan.status == 'completed' %}
-                        <span class="text-success"><i class="fas fa-check-circle me-1"></i>Completed</span>
+                        <span class="text-success"><i class="fas fa-check-circle me-2"></i>Completed</span>
                     {% elif scan.status == 'running' %}
-                        <span class="text-primary"><i class="fas fa-spinner fa-spin me-1"></i>Running...</span>
+                        <span class="text-primary"><i class="fas fa-spinner fa-spin me-2"></i>Running...</span>
                     {% elif scan.status == 'failed' %}
-                        <span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Failed</span>
+                        <span class="text-danger"><i class="fas fa-exclamation-triangle me-2"></i>Failed</span>
                     {% else %}
-                        <span class="text-warning"><i class="fas fa-clock me-1"></i>{{ scan.status|title }}</span>
+                        <span class="text-warning"><i class="fas fa-clock me-2"></i>{{ scan.status|title }}</span>
                     {% endif %}
                 </div>
-                <div id="scan-phase-text" class="small text-muted mt-1 italic">{{ scan.current_phase|default:"" }}</div>
+                <div id="scan-phase-text" class="small text-white-50 mt-2 font-monospace">{{ scan.current_phase|default:"Waiting for execution" }}</div>
                 
-                <div id="progress-container" class="progress mt-3" style="height: 8px; {% if scan.status != 'running' %}display: none;{% endif %}">
+                <div id="progress-container" class="progress mt-4" style="height: 6px; background: rgba(0,0,0,0.5); {% if scan.status != 'running' %}display: none;{% endif %}">
                     <div id="scan-progress-bar" 
-                         class="progress-bar progress-bar-striped progress-bar-animated" 
+                         class="progress-bar progress-bar-striped progress-bar-animated bg-primary" 
                          role="progressbar" 
-                         style="width: {{ scan.progress|default:0 }}%;" 
+                         style="width: {{ scan.progress|default:0 }}%; box-shadow: 0 0 10px rgba(59,130,246,0.5);" 
                          aria-valuenow="{{ scan.progress|default:0 }}" 
                          aria-valuemin="0" 
                          aria-valuemax="100"></div>
                 </div>
             </div>
         </div>
-        <div class="col-md-2">
-            <div class="card border-0 bg-danger text-white shadow-sm p-3 h-100 text-center">
-                <div class="small fw-bold mb-1">CRITICAL</div>
-                <div class="h2 fw-bold mb-0" id="count-critical">{{ scan.critical_count }}</div>
+        <div class="col-xl-6">
+            <div class="row g-4 h-100">
+                <div class="col-md-4">
+                    <div class="severity-card sev-critical p-4 h-100 text-center d-flex flex-column justify-content-center">
+                        <div class="small fw-bold mb-2 text-uppercase tracking-widest">CRITICAL</div>
+                        <div class="display-5 fw-bold mb-0" id="count-critical" style="text-shadow: 0 0 20px rgba(248, 81, 73, 0.4);">{{ scan.critical_count }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="severity-card sev-high p-4 h-100 text-center d-flex flex-column justify-content-center">
+                        <div class="small fw-bold mb-2 text-uppercase tracking-widest">HIGH</div>
+                        <div class="display-5 fw-bold mb-0" id="count-high" style="text-shadow: 0 0 20px rgba(240, 136, 62, 0.4);">{{ scan.high_count }}</div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="severity-card sev-medium p-4 h-100 text-center d-flex flex-column justify-content-center">
+                        <div class="small fw-bold mb-2 text-uppercase tracking-widest">MEDIUM</div>
+                        <div class="display-5 fw-bold mb-0" id="count-medium" style="text-shadow: 0 0 20px rgba(245, 158, 11, 0.4);">{{ scan.medium_count }}</div>
+                    </div>
+                </div>
             </div>
         </div>
-        <div class="col-md-2">
-            <div class="card border-0 bg-warning text-dark shadow-sm p-3 h-100 text-center">
-                <div class="small fw-bold mb-1">HIGH</div>
-                <div class="h2 fw-bold mb-0" id="count-high">{{ scan.high_count }}</div>
-            </div>
-        </div>
-        <div class="col-md-2">
-            <div class="card border-0 bg-info text-white shadow-sm p-3 h-100 text-center">
-                <div class="small fw-bold mb-1">MEDIUM</div>
-                <div class="h2 fw-bold mb-0" id="count-medium">{{ scan.medium_count }}</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card border-0 shadow-sm p-4 h-100 text-center">
-                <div class="text-muted small text-uppercase fw-bold mb-2">Findings</div>
-                <div class="h4 fw-bold mb-0 text-dark" id="count-total">{{ scan.total_vulnerabilities }}</div>
-                <div class="mt-2 small text-muted">Scan Type: {{ scan.get_scan_type_display }}</div>
+        <div class="col-xl-3">
+            <div class="glass-panel p-4 h-100 text-center d-flex flex-column justify-content-center">
+                <div class="text-white-50 small text-uppercase fw-bold mb-2 tracking-widest" style="letter-spacing: 2px;">Total Findings</div>
+                <div class="display-4 fw-bold text-white mb-0" id="count-total">{{ scan.total_vulnerabilities }}</div>
+                <div class="mt-2 small text-white-50 font-monospace"><i class="fas fa-radar me-1"></i>Scan Engine: {{ scan.get_scan_type_display }}</div>
             </div>
         </div>
     </div>
 
     <!-- Results Tabs -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white border-bottom-0 pt-3">
-            <ul class="nav nav-tabs card-header-tabs">
+    <div class="glass-panel overflow-hidden shadow-lg mb-5">
+        <div class="card-header bg-transparent border-bottom border-light border-opacity-10 pt-3">
+            <ul class="nav nav-tabs card-header-tabs border-bottom-0">
                 <li class="nav-item">
-                    <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#summary">Summary</button>
+                    <button class="nav-link active fw-bold text-uppercase tracking-widest small" data-bs-toggle="tab" data-bs-target="#summary"><i class="fas fa-file-alt me-2"></i>Summary</button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link fw-bold text-danger" data-bs-toggle="tab" data-bs-target="#vulns">Vulnerabilities</button>
+                    <button class="nav-link fw-bold text-uppercase tracking-widest small" data-bs-toggle="tab" data-bs-target="#vulns"><i class="fas fa-bug me-2"></i>Vulnerabilities</button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#raw">Raw Output</button>
+                    <button class="nav-link fw-bold text-uppercase tracking-widest small" data-bs-toggle="tab" data-bs-target="#raw"><i class="fas fa-terminal me-2"></i>Console Log</button>
                 </li>
             </ul>
         </div>
-        <div class="card-body p-4">
+        <div class="card-body p-0 bg-transparent border-0">
             <div class="tab-content">
                 <!-- Summary Tab -->
-                <div class="tab-pane fade show active" id="summary">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="fw-bold mb-3">Scan Configuration</h6>
-                            <pre class="bg-light p-3 rounded border small"><code>{{ scan.config|default:"{}" }}</code></pre>
+                <div class="tab-pane fade show active p-4 py-5" id="summary">
+                    <div class="row g-5">
+                        <div class="col-md-6 border-end border-light border-opacity-10">
+                            <h6 class="fw-bold mb-4 text-white text-uppercase tracking-widest small"><i class="fas fa-sliders-h me-2 text-primary"></i>Engine Configuration</h6>
+                            <pre class="p-4 rounded-3 text-info font-monospace small shadow-inner" style="background:#020617; border: 1px solid rgba(255,255,255,0.05); overflow-x: auto;"><code>{{ scan.config|default:"{}" }}</code></pre>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="fw-bold mb-3">Target Info</h6>
-                            <ul class="list-group list-group-flush">
-                                <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 px-0">
-                                    <span class="text-muted">Target Name:</span>
-                                    <span class="fw-bold">{{ scan.target.name }}</span>
+                            <h6 class="fw-bold mb-4 text-white text-uppercase tracking-widest small"><i class="fas fa-crosshairs me-2 text-primary"></i>Target Parameters</h6>
+                            <ul class="list-group list-group-flush bg-transparent">
+                                <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-bottom border-light border-opacity-10 py-3 px-0">
+                                    <span class="text-white-50 fw-bold">Target Identity</span>
+                                    <span class="fw-bold text-white">{{ scan.target.name }}</span>
                                 </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 px-0">
-                                    <span class="text-muted">Protocol:</span>
-                                    <span class="badge bg-secondary">{{ scan.target.protocol|upper }}</span>
+                                <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-bottom border-light border-opacity-10 py-3 px-0">
+                                    <span class="text-white-50 fw-bold">Communication Protocol</span>
+                                    <span class="badge border border-secondary text-uppercase px-3 py-2 text-white-50 fw-bold" style="background: rgba(15, 23, 42, 0.8);">{{ scan.target.protocol|upper }}</span>
                                 </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 px-0">
-                                    <span class="text-muted">URL:</span>
-                                    <code>{{ scan.target.url }}</code>
+                                <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-bottom border-light border-opacity-10 py-3 px-0">
+                                    <span class="text-white-50 fw-bold">URI Endpoint</span>
+                                    <code class="text-primary bg-primary bg-opacity-10 px-2 py-1 rounded">{{ scan.target.url }}</code>
                                 </li>
-                                <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 px-0">
-                                    <span class="text-muted">IP Target:</span>
-                                    <code>{{ scan.target.ip_address|default:"Auto-discover" }}</code>
+                                <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 py-3 px-0">
+                                    <span class="text-white-50 fw-bold">Resolved IPv4/v6</span>
+                                    <code class="text-info bg-info bg-opacity-10 px-2 py-1 rounded">{{ scan.target.ip_address|default:"Auto-discover via DNS" }}</code>
                                 </li>
                             </ul>
                         </div>
@@ -141,105 +207,97 @@
                 </div>
 
                 <!-- Vulns Tab -->
-                <div class="tab-pane fade p-3" id="vulns">
+                <div class="tab-pane fade" id="vulns">
                     {% if scan.vulnerabilities.exists %}
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle">
-                                <thead class="table-light">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead style="background: rgba(255, 255, 255, 0.03);">
                                     <tr>
-                                        <th>Severity</th>
-                                        <th>Vulnerability</th>
-                                        <th>Component</th>
-                                        <th>CVE</th>
-                                        <th>Action</th>
+                                        <th class="border-secondary border-opacity-25 py-4 ps-4 text-white-50 text-uppercase small tracking-widest">Severity</th>
+                                        <th class="border-secondary border-opacity-25 py-4 text-white-50 text-uppercase small tracking-widest">Vulnerability</th>
+                                        <th class="border-secondary border-opacity-25 py-4 text-white-50 text-uppercase small tracking-widest">Component</th>
+                                        <th class="border-secondary border-opacity-25 py-4 text-white-50 text-uppercase small tracking-widest">CVE / CVSS</th>
+                                        <th class="border-secondary border-opacity-25 py-4 text-white-50 text-uppercase small tracking-widest">Exploitability</th>
+                                        <th class="border-secondary border-opacity-25 py-4 pe-4 text-white-50 text-uppercase small tracking-widest text-end">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for vuln in scan.vulnerabilities.all %}
-                                        <tr>
-                                            <td>
+                                        <tr style="transition: all 0.2s;">
+                                            <td class="border-secondary border-opacity-25 py-3 ps-4">
                                                 {% if vuln.severity == 'critical' %}
-                                                    <span class="badge bg-danger">Critical</span>
+                                                    <span class="badge" style="background: rgba(239, 68, 68, 0.2); border: 1px solid rgba(239, 68, 68, 0.4); color: #ef4444; padding: 6px 12px;">CRITICAL</span>
                                                 {% elif vuln.severity == 'high' %}
-                                                    <span class="badge bg-warning text-dark">High</span>
+                                                    <span class="badge" style="background: rgba(245, 158, 11, 0.2); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b; padding: 6px 12px;">HIGH</span>
                                                 {% elif vuln.severity == 'medium' %}
-                                                    <span class="badge bg-info text-white">Medium</span>
+                                                    <span class="badge" style="background: rgba(14, 165, 233, 0.2); border: 1px solid rgba(14, 165, 233, 0.4); color: #0ea5e9; padding: 6px 12px;">MEDIUM</span>
                                                 {% elif vuln.severity == 'low' %}
-                                                    <span class="badge bg-secondary">Low</span>
+                                                    <span class="badge" style="background: rgba(34, 197, 94, 0.2); border: 1px solid rgba(34, 197, 94, 0.4); color: #22c55e; padding: 6px 12px;">LOW</span>
                                                 {% else %}
-                                                    <span class="badge bg-light text-dark">Info</span>
+                                                    <span class="badge border border-secondary text-white-50 px-3 py-2" style="background: rgba(15, 23, 42, 0.8);">INFO</span>
                                                 {% endif %}
                                             </td>
-                                            <td>
-                                                <div class="fw-bold">{{ vuln.title }}</div>
-                                                <div class="small text-muted">{{ vuln.description|truncatechars:100 }}</div>
+                                            <td class="border-secondary border-opacity-25 py-3">
+                                                <div class="fw-bold text-white fs-6 mb-1">{{ vuln.title }}</div>
+                                                <div class="small text-white-50">{{ vuln.description|truncatechars:80 }}</div>
                                             </td>
-                                            <td><code>{{ vuln.component|default:"N/A" }}</code></td>
-                                            <td>{{ vuln.cve_id|default:"-" }}</td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#vulnModal{{ vuln.id }}">
-                                                    View
-                                                </button>
+                                            <td class="border-secondary border-opacity-25 py-3"><code class="bg-dark px-2 py-1 rounded border border-secondary border-opacity-25 text-primary">{{ vuln.component|default:"N/A" }}</code></td>
+                                            <td class="border-secondary border-opacity-25 py-3">
+                                                {% if vuln.cve_id %}
+                                                    <a href="https://nvd.nist.gov/vuln/detail/{{ vuln.cve_id }}" target="_blank" class="fw-bold text-info text-decoration-none"><i class="fas fa-external-link-alt small me-1"></i>{{ vuln.cve_id }}</a>
+                                                    {% if vuln.cvss_score %}
+                                                        <br><span class="badge mt-2 font-monospace {% if vuln.cvss_score >= 9.0 %}text-danger border-danger{% elif vuln.cvss_score >= 7.0 %}text-warning border-warning{% elif vuln.cvss_score >= 4.0 %}text-info border-info{% else %}text-white-50 border-secondary{% endif %}" style="background: transparent; border: 1px solid rgba(255,255,255,0.2);">
+                                                            CVSS {{ vuln.cvss_score }}
+                                                        </span>
+                                                    {% endif %}
+                                                {% else %}
+                                                    <span class="text-white-50 font-monospace">—</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="border-secondary border-opacity-25 py-3">
+                                                {% if vuln.has_exploit %}
+                                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1"><i class="fas fa-bomb me-1"></i>PoC Exists</span>
+                                                {% elif vuln.cve_id %}
+                                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1"><i class="fas fa-shield-alt me-1"></i>No Known PoC</span>
+                                                {% else %}
+                                                    <span class="text-white-50 font-monospace">—</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="border-secondary border-opacity-25 py-3 pe-4 text-end">
+                                                <div class="btn-group shadow-sm">
+                                                    <button class="btn btn-sm btn-outline-info vdb-detail-btn" data-vuln-id="{{ vuln.id }}" title="View Database Details">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                    {% if vuln.cve_id %}
+                                                    <button class="btn btn-sm btn-outline-warning vdb-refresh-btn" data-vuln-id="{{ vuln.id }}" title="Refresh from NVD">
+                                                        <i class="fas fa-sync-alt"></i>
+                                                    </button>
+                                                    {% endif %}
+                                                    <a href="{% url 'ai_assistant:remediation_guide' vuln.id %}" class="btn btn-sm btn-primary" title="AI Remediation Guide">
+                                                        <i class="fas fa-robot"></i>
+                                                    </a>
+                                                </div>
                                             </td>
                                         </tr>
-                                        
-                                        <!-- Modal for each vulnerability -->
-                                        <div class="modal fade" id="vulnModal{{ vuln.id }}" tabindex="-1">
-                                            <div class="modal-dialog modal-lg">
-                                                <div class="modal-content">
-                                                    <div class="modal-header">
-                                                        <h5 class="modal-title fw-bold">Finding: {{ vuln.title }}</h5>
-                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                    </div>
-                                                    <div class="modal-body">
-                                                        <div class="row mb-3">
-                                                            <div class="col-md-3 text-muted">Severity:</div>
-                                                            <div class="col-md-9 fw-bold text-uppercase">{{ vuln.severity }}</div>
-                                                        </div>
-                                                        <div class="row mb-3">
-                                                            <div class="col-md-3 text-muted">Component:</div>
-                                                            <div class="col-md-9"><code>{{ vuln.component }}</code></div>
-                                                        </div>
-                                                        <div class="row mb-3">
-                                                            <div class="col-md-3 text-muted">Description:</div>
-                                                            <div class="col-md-9">{{ vuln.description|linebreaks }}</div>
-                                                        </div>
-                                                        {% if vuln.evidence %}
-                                                        <div class="row mb-3">
-                                                            <div class="col-md-3 text-muted">Evidence:</div>
-                                                            <div class="col-md-9">
-                                                                <pre class="bg-light p-2 rounded small"><code>{{ vuln.evidence }}</code></pre>
-                                                            </div>
-                                                        </div>
-                                                        {% endif %}
-                                                        {% if vuln.remediation %}
-                                                        <div class="row mb-3">
-                                                            <div class="col-md-3 text-muted">Remediation:</div>
-                                                            <div class="col-md-9 text-success">{{ vuln.remediation|linebreaks }}</div>
-                                                        </div>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
                                     {% endfor %}
                                 </tbody>
                             </table>
                         </div>
                     {% else %}
-                        <div class="py-5 text-center">
-                            <div class="mb-4">
-                                <i class="fas fa-shield-virus fa-4x text-muted opacity-25"></i>
+                        <div class="py-5 text-center my-4">
+                            <div class="mb-4 position-relative d-inline-block">
+                                <div class="position-absolute top-50 start-50 translate-middle" style="width: 100px; height: 100px; background: rgba(34, 197, 94, 0.1); filter: blur(20px); border-radius: 50%;"></div>
+                                <i class="fas fa-shield-virus fa-4x text-success position-relative" style="text-shadow: 0 0 20px rgba(34, 197, 94, 0.5);"></i>
                             </div>
                             {% if scan.status == 'completed' %}
-                                <h5 class="text-success fw-bold">No High-Risk Vulnerabilities Found!</h5>
-                                <p class="text-muted">This target appears to be following security best practices for the applied scan type.</p>
+                                <h4 class="text-white fw-bold mb-3">No High-Risk Vulnerabilities Found</h4>
+                                <p class="text-white-50 w-50 mx-auto">This target appears to be following security best practices for the applied scan type. No active threats were identified.</p>
                             {% elif scan.status == 'running' or scan.status == 'pending' %}
-                                <h5>Analysis in progress...</h5>
-                                <p class="text-muted">Vulnerabilities will appear here as they are discovered by the engine.</p>
+                                <h4 class="text-white fw-bold mb-3">Analysis in Progress...</h4>
+                                <p class="text-white-50 w-50 mx-auto">Vulnerabilities will be cataloged here automatically as they are discovered by the assessment engine.</p>
                             {% else %}
-                                <h5>No vulnerability data available.</h5>
-                                <p class="text-muted">The scan may have failed or was stopped early before findings could be recorded.</p>
+                                <h4 class="text-white fw-bold mb-3">No Vulnerability Data Available</h4>
+                                <p class="text-white-50 w-50 mx-auto">The scan execution may have failed or was aborted prior to findings being ingested into the database.</p>
                             {% endif %}
                         </div>
                     {% endif %}
@@ -247,23 +305,51 @@
 
                 <!-- Raw Tab -->
                 <div class="tab-pane fade" id="raw">
-                    <div class="bg-dark text-light p-4 rounded shadow-sm overflow-auto" style="max-height: 500px; font-family: 'Courier New', Courier, monospace;">
-                        <div class="mb-2 text-warning fw-bold">[SYSTEM] Log capture started at {{ scan.created_at|date:"c" }}</div>
-                        <div class="mb-1 text-info">> Initializing engine: {{ scan.scan_type }}</div>
-                        <div class="mb-1 text-info">> Connecting to target: {{ scan.target.url }}</div>
+                    <div class="m-0 p-4 rounded-bottom shadow-inner overflow-auto" style="background:#020617; max-height: 600px; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.9rem;">
+                        <div class="mb-2 text-warning fw-bold"><span class="text-white-50">$</span> [SYSTEM] Log capture started at {{ scan.created_at|date:"c" }}</div>
+                        <div class="mb-2 text-info"><span class="text-white-50">$</span> [INIT] Initializing engine module: <span class="text-white fw-bold">{{ scan.scan_type }}</span></div>
+                        <div class="mb-2 text-info"><span class="text-white-50">$</span> [CONN] Establishing connection to target: <span class="text-white text-decoration-underline">{{ scan.target.url }}</span></div>
                         {% if scan.status == 'completed' %}
-                            <div class="mb-1 text-success">> Scan loop finished successfully.</div>
-                            <div class="mb-1 text-success">> Results exported to JSON/XML.</div>
+                            <div class="mb-2 text-success"><span class="text-white-50">$</span> [DONE] Scan loop finished successfully. Exit code 0.</div>
+                            <div class="mb-2 text-success"><span class="text-white-50">$</span> [EXPORT] Results parsed and committed to database.</div>
                         {% elif scan.status == 'failed' %}
-                            <div class="mb-1 text-danger">> FATAL: Connection reset by remote host.</div>
+                            <div class="mb-2 text-danger"><span class="text-white-50">$</span> [FATAL] Connection reset by remote host or engine timeout.</div>
+                            <div class="mb-2 text-danger"><span class="text-white-50">$</span> [ERROR] Exit code 1. Process terminated.</div>
                         {% elif scan.status == 'running' %}
-                            <div class="mb-1 text-muted animate__animated animate__flash animate__infinite">> Probing network segments... [BUSY]</div>
+                            <div class="mb-2 text-white-50 animate__animated animate__flash animate__infinite"><span class="text-white-50">$</span> [BUSY] Probing network segments & executing payload scripts...</div>
                         {% endif %}
+                        <div class="animated-cursor d-inline-block mt-2" style="width: 10px; height: 1.2em; background: #fff; animation: blink 1s step-end infinite;"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
+
+<style>
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    .shadow-inner { box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
+</style>
+
+<!-- ── Single shared VDB detail modal ── -->
+<div class="modal fade" id="vdbModal" tabindex="-1">
+  <div class="modal-dialog modal-xl modal-dialog-scrollable">
+    <div class="modal-content" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+      <div class="modal-header border-secondary border-opacity-25 py-4 px-5">
+        <h4 class="modal-title fw-bold text-white mb-0" id="vdbModalTitle"><i class="fas fa-database me-2 text-primary"></i>Vulnerability Detail Record</h4>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-5" id="vdbModalBody">
+        <div class="text-center py-5"><div class="spinner-border text-primary" style="width: 3rem; height: 3rem;"></div><div class="mt-3 text-white-50 font-monospace">Querying vulnerability database...</div></div>
+      </div>
+      <div class="modal-footer border-secondary border-opacity-25 px-5 py-4">
+        <a id="vdbNvdLink" href="#" target="_blank" class="btn btn-outline-info"><i class="fas fa-external-link-alt me-2"></i>NVD Record</a>
+        <a id="vdbExploitLink" href="#" target="_blank" class="btn btn-outline-warning"><i class="fas fa-search me-2"></i>Exploit-DB</a>
+        <a id="vdbMitreLink" href="#" target="_blank" class="btn btn-outline-secondary text-white"><i class="fas fa-shield-alt me-2"></i>MITRE ATT&CK</a>
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Close Window</button>
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}
 

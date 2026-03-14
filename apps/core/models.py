@@ -70,12 +70,36 @@ class UserProfile(models.Model):
         return f'{self.user.email} Profile'
 
 
+class UserSetting(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='settings')
+    theme = models.CharField(max_length=20, default='dark', choices=(('light', 'Light'), ('dark', 'Dark')))
+    enable_ai_remediation = models.BooleanField(default=True)
+    webhook_url = models.URLField(blank=True, null=True)
+    
+    # Tool Integration
+    zap_api_key = models.CharField(max_length=255, blank=True)
+    zap_proxy_url = models.CharField(max_length=255, default='http://localhost:8080')
+    
+    # Notifications
+    email_notifications = models.BooleanField(default=True)
+    scan_complete_alerts = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f'{self.user.email} Settings'
+
+
 @receiver(post_save, sender=User)
-def create_or_update_user_profile(sender, instance, created, **kwargs):
+def create_or_update_user_related(sender, instance, created, **kwargs):
     if created:
         UserProfile.objects.create(user=instance)
+        UserSetting.objects.create(user=instance)
     else:
         try:
             instance.profile.save()
         except UserProfile.DoesNotExist:
             UserProfile.objects.create(user=instance)
+        
+        try:
+            instance.settings.save()
+        except UserSetting.DoesNotExist:
+            UserSetting.objects.create(user=instance)

@@ -100,6 +100,14 @@ class Vulnerability(models.Model):
     cwe_id = models.CharField(max_length=50, blank=True, verbose_name="CWE ID")
     cwe_category = models.CharField(max_length=255, blank=True, null=True)
     
+    # External Data
+    cvss_score = models.FloatField(null=True, blank=True)
+    cvss_vector = models.CharField(max_length=100, blank=True)
+    has_exploit = models.BooleanField(default=False)
+    exploit_refs = models.JSONField(default=list, blank=True)
+    external_data = models.JSONField(default=dict, blank=True)
+    last_updated_db = models.DateTimeField(null=True, blank=True)
+    
     owasp_category = models.CharField(max_length=100, blank=True, null=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
@@ -146,3 +154,80 @@ class OWASPAlert(models.Model):
 
     def __str__(self):
         return f"{self.alert} ({self.risk})"
+
+class Report(models.Model):
+    REPORT_TYPES = (
+        ('executive', 'Executive Summary'),
+        ('technical', 'Technical Report'),
+        ('compliance_pci', 'PCI-DSS Compliance'),
+        ('compliance_iso', 'ISO 27001 Compliance'),
+    )
+
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('generating', 'Generating'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='reports')
+    scan = models.ForeignKey(Scan, on_delete=models.SET_NULL, null=True, blank=True, related_name='reports')
+    title = models.CharField(max_length=255)
+    report_type = models.CharField(max_length=20, choices=REPORT_TYPES, default='technical')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    pdf_file = models.FileField(upload_to='reports/%Y/%m/', blank=True, null=True)
+    file_size = models.PositiveIntegerField(null=True, blank=True, help_text="File size in bytes")
+    
+    filters = models.JSONField(default=dict, blank=True)
+    error_message = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.title} ({self.get_report_type_display()})"
+
+class DataExport(models.Model):
+    EXPORT_RANGES = (
+        ('all_scans', 'All Scans Data'),
+        ('all_vulns', 'All Vulnerabilities'),
+        ('filtered', 'Filtered Data'),
+    )
+
+    EXPORT_FORMATS = (
+        ('csv', 'CSV'),
+        ('json', 'JSON'),
+        ('excel', 'Excel (XLSX)'),
+    )
+
+    STATUS_CHOICES = (
+        ('pending', 'Pending'),
+        ('processing', 'Processing'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+    )
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='data_exports')
+    export_range = models.CharField(max_length=20, choices=EXPORT_RANGES, default='filtered')
+    export_format = models.CharField(max_length=10, choices=EXPORT_FORMATS, default='csv')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
+    
+    file = models.FileField(upload_to='exports/%Y/%m/', blank=True, null=True)
+    file_size = models.PositiveIntegerField(null=True, blank=True)
+    
+    filters = models.JSONField(default=dict, blank=True)
+    fields_selection = models.JSONField(default=list, blank=True)
+    error_message = models.TextField(blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"Export #{self.id} - {self.get_export_range_display()} ({self.export_format.upper()})"

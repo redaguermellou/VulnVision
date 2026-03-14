@@ -9,6 +9,7 @@ urlpatterns = [
     path('<int:pk>/', views.TargetDetailView.as_view(), name='target_detail'),
     path('<int:pk>/update/', views.TargetUpdateView.as_view(), name='target_update'),
     path('<int:pk>/delete/', views.TargetDeleteView.as_view(), name='target_delete'),
+    path('<int:pk>/scan/', views.TargetScanTriggerView.as_view(), name='target_scan_trigger'),
     
     # Import/Export
     path('export/', views.export_targets_csv, name='target_export'),

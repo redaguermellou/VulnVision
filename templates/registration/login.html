@@ -3,22 +3,96 @@
 
 {% block title %}Login - VulnVision{% endblock %}
 
+{% block extra_css %}
+<style>
+/* Glassmorphism auth card */
+.auth-wrapper {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.auth-card {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+}
+.auth-card::before {
+    content: '';
+    position: absolute;
+    top: -50px; left: -50px;
+    width: 150px; height: 150px;
+    background: rgba(59, 130, 246, 0.3);
+    filter: blur(60px);
+    z-index: 0;
+}
+.auth-card::after {
+    content: '';
+    position: absolute;
+    bottom: -50px; right: -50px;
+    width: 150px; height: 150px;
+    background: rgba(139, 92, 246, 0.3);
+    filter: blur(60px);
+    z-index: 0;
+}
+.auth-card-body {
+    position: relative;
+    z-index: 1;
+}
+.form-control {
+    background: rgba(15, 23, 42, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+}
+.form-control:focus {
+    border-color: var(--vt-primary) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3) !important;
+    background: rgba(15, 23, 42, 0.9) !important;
+}
+label {
+    color: #94a3b8 !important;
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="row justify-content-center">
-    <div class="col-md-5">
-        <div class="card shadow-sm border-0 mt-5">
-            <div class="card-body p-5">
-                <h3 class="text-center mb-4 fw-bold">Login</h3>
-                <form method="post">
-                    {% csrf_token %}
-                    {{ form|crispy }}
-                    <div class="d-grid gap-2 mt-4">
-                        <button type="submit" class="btn btn-primary py-2">Sign In</button>
+<div class="container auth-wrapper">
+    <div class="row w-100 justify-content-center">
+        <div class="col-md-6 col-lg-5 col-xl-4">
+            <div class="auth-card my-5">
+                <div class="auth-card-body p-5">
+                    <div class="text-center mb-5">
+                        <div class="d-inline-block position-relative mb-3">
+                            <div class="position-absolute top-50 start-50 translate-middle" style="width: 60px; height: 60px; background: rgba(59, 130, 246, 0.2); filter: blur(15px); border-radius: 50%;"></div>
+                            <i class="fas fa-shield-alt fa-3x text-primary position-relative" style="text-shadow: 0 0 20px rgba(59, 130, 246, 0.5);"></i>
+                        </div>
+                        <h3 class="fw-bold text-white mb-2" style="font-size: 1.8rem;">Secure Login</h3>
+                        <p class="text-white-50 small tracking-widest text-uppercase">Access the VulnVision Platform</p>
                     </div>
-                </form>
-                <div class="mt-4 text-center">
-                    <p class="text-muted small">Don't have an account? <a href="{% url 'register' %}" class="text-primary text-decoration-none">Register here</a></p>
-                    <p class="small"><a href="{% url 'password_reset' %}" class="text-muted text-decoration-none">Forgot password?</a></p>
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        <div class="d-grid gap-2 mt-5">
+                            <button type="submit" class="btn btn-primary py-3 fw-bold d-flex align-items-center justify-content-center text-uppercase tracking-widest shadow-lg" style="border-radius: 8px; font-size: 0.9rem;">
+                                <span>Authenticate</span> <i class="fas fa-arrow-right ms-2"></i>
+                            </button>
+                        </div>
+                    </form>
+                    <div class="mt-5 text-center">
+                        <p class="small text-white-50">Don't have an account? <a href="{% url 'register' %}" class="text-info text-decoration-none fw-bold">Register here</a></p>
+                        <p class="small"><a href="{% url 'password_reset' %}" class="text-decoration-none text-white-50 transition-colors hover:text-white">Forgot password?</a></p>
+                    </div>
                 </div>
             </div>
         </div>

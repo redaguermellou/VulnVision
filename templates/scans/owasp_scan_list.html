@@ -7,7 +7,7 @@
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h2 class="fw-bold text-dark mb-0">OWASP Top 10 Automation</h2>
-            <p class="text-muted small mb-0">Web application security assessment using ZAP</p>
+            <p class="text-white-50 small mb-0">Web application security assessment using ZAP</p>
         </div>
         <div>
             <a href="{% url 'scans:owasp_scan_create' %}" class="btn btn-primary rounded-pill px-4">
@@ -16,60 +16,99 @@
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light text-muted small text-uppercase">
-                        <tr>
-                            <th class="ps-4">Target</th>
-                            <th>Status</th>
-                            <th>Progress</th>
-                            <th>Findings</th>
-                            <th>Started</th>
-                            <th class="text-end pe-4">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for scan in scans %}
-                        <tr>
-                            <td class="ps-4">
-                                <div class="fw-bold text-dark">{{ scan.target.name }}</div>
-                                <div class="text-muted small">{{ scan.target.address }}</div>
-                            </td>
-                            <td>
-                                <span class="badge rounded-pill bg-{% if scan.status == 'completed' %}success{% elif scan.status == 'running' %}info{% elif 'Failed' in scan.status %}danger{% else %}secondary{% endif %} px-3">
-                                    {{ scan.status|title }}
-                                </span>
-                            </td>
-                            <td>
-                                <div class="progress" style="height: 6px; width: 100px;">
-                                    <div class="progress-bar" role="progressbar" style="width: {{ scan.progress }}%"></div>
+    <div class="glass-panel overflow-hidden mb-4">
+        <div class="table-responsive z-1 position-relative">
+            <table class="table table-hover align-middle mb-0 text-white" style="--bs-table-bg: transparent; --bs-table-color: #f8fafc;">
+                <thead style="background: rgba(0, 0, 0, 0.2);">
+                    <tr>
+                        <th class="border-secondary border-opacity-10 py-3 ps-4 text-white-50 text-uppercase small tracking-widest fw-bold">Target</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">Status</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">Progress</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">Findings</th>
+                        <th class="border-secondary border-opacity-10 py-3 text-white-50 text-uppercase small tracking-widest fw-bold">Started</th>
+                        <th class="border-secondary border-opacity-10 py-3 pe-4 text-white-50 text-uppercase small tracking-widest fw-bold text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody style="border-top: none;">
+                    {% for scan in scans %}
+                    <tr>
+                        <td class="border-secondary border-opacity-25 py-3 ps-4">
+                            <div class="fw-bold text-white fs-6">{{ scan.target.name }}</div>
+                            <div class="text-info font-monospace small"><i class="fas fa-link me-1 text-white-50"></i>{{ scan.target.address }}</div>
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3">
+                            <span class="badge rounded-pill bg-{% if scan.status == 'completed' %}success{% elif scan.status == 'running' %}info{% elif 'Failed' in scan.status %}danger{% else %}secondary{% endif %} bg-opacity-10 text-{% if scan.status == 'completed' %}success{% elif scan.status == 'running' %}info{% elif 'Failed' in scan.status %}danger{% else %}secondary{% endif %} border border-{% if scan.status == 'completed' %}success{% elif scan.status == 'running' %}info{% elif 'Failed' in scan.status %}danger{% else %}secondary{% endif %} border-opacity-25 px-3 py-2">
+                                {{ scan.status|title }}
+                            </span>
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3">
+                            <div class="d-flex align-items-center">
+                                <div class="progress flex-grow-1" style="height: 6px; min-width: 100px; background: rgba(255,255,255,0.05); border-radius: 3px;">
+                                    <div class="progress-bar progress-bar-striped {% if scan.status == 'running' %}progress-bar-animated{% endif %} bg-info" role="progressbar" style="width: {{ scan.progress }}%; border-radius: 3px;"></div>
                                 </div>
-                                <small class="text-muted">{{ scan.progress }}%</small>
-                            </td>
-                            <td>
-                                <span class="badge bg-dark rounded-pill px-3">{{ scan.alerts.count }} Alerts</span>
-                            </td>
-                            <td class="small">{{ scan.created_at|date:"M d, H:i" }}</td>
-                            <td class="text-end pe-4">
-                                <a href="{% url 'scans:owasp_scan_detail' scan.id %}" class="btn btn-sm btn-outline-dark rounded-pill px-3">
-                                    View Results
-                                </a>
-                            </td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="6" class="text-center py-5 text-muted">
-                                <i class="fas fa-shield-alt fa-3x mb-3 d-block opacity-25"></i>
-                                No OWASP scans found. Start one to analyze your web targets.
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                                <small class="text-info font-monospace ms-3 fw-bold">{{ scan.progress }}%</small>
+                            </div>
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3">
+                            <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 rounded-pill px-3 py-2">{{ scan.alerts.count }} Alerts</span>
+                        </td>
+                        <td class="border-secondary border-opacity-25 py-3 small text-white-50 font-monospace"><i class="far fa-clock me-1"></i>{{ scan.created_at|date:"M d, H:i" }}</td>
+                        <td class="border-secondary border-opacity-25 py-3 text-end pe-4">
+                            <a href="{% url 'scans:owasp_scan_detail' scan.id %}" class="btn btn-sm btn-outline-info rounded-pill px-3 shadow-sm">
+                                <i class="fas fa-eye me-1"></i> View Results
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5 text-white-50">
+                            <div class="py-4">
+                                <i class="fas fa-shield-alt fa-3x mb-4 opacity-25 text-info" style="filter: drop-shadow(0 0 10px rgba(14, 165, 233, 0.5));"></i>
+                                <h5 class="text-white">No OWASP scans found</h5>
+                                <p class="mb-4">Start an automated vulnerability scan to analyze your web targets.</p>
+                                <a href="{% url 'scans:owasp_scan_create' %}" class="btn btn-primary rounded-pill px-4">New Scan Initiate</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
+<style>
+    .glass-panel {
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        position: relative;
+    }
+    .glass-panel::before {
+        content: '';
+        position: absolute;
+        top: -50px; left: -50px;
+        width: 150px; height: 150px;
+        background: rgba(139, 92, 246, 0.15); /* light purple accent */
+        filter: blur(50px);
+        z-index: 0;
+        pointer-events: none;
+    }
+    
+    /* Table styles */
+    .table > :not(caption) > * > * {
+        background-color: transparent !important;
+        border-bottom-color: rgba(255,255,255,0.05);
+    }
+    
+    .table-hover tbody tr {
+        transition: background-color 0.2s ease;
+    }
+    
+    .table-hover tbody tr:hover {
+        background-color: rgba(255, 255, 255, 0.03) !important;
+    }
+</style>
 {% endblock %}

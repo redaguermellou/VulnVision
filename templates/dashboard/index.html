@@ -4,117 +4,230 @@
 
 {% block extra_css %}
 <style>
+    /* Dashboard specific styling */
+    .dashboard-header-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        letter-spacing: -1px;
+        background: linear-gradient(135deg, #ffffff 0%, #94a3b8 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+    }
+    
     .stat-card {
-        transition: transform 0.2s;
-        border: none;
-        border-radius: 15px;
+        padding: 30px 24px;
+        border-radius: 20px;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        position: relative;
+        overflow: hidden;
+    }
+    .stat-card::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; right: 0; height: 3px;
+        background: linear-gradient(90deg, transparent, var(--vt-primary), transparent);
+        opacity: 0; transition: opacity 0.3s ease;
     }
     .stat-card:hover {
-        transform: translateY(-5px);
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5);
+        border-color: rgba(255, 255, 255, 0.1);
     }
+    .stat-card:hover::before { opacity: 1; }
+    
+    .stat-card.critical:hover::before { background: linear-gradient(90deg, transparent, var(--vt-danger), transparent); }
+    .stat-card.active:hover::before { background: linear-gradient(90deg, transparent, var(--vt-success), transparent); }
+    .stat-card.time:hover::before { background: linear-gradient(90deg, transparent, var(--vt-warning), transparent); }
+
+    .stat-icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        margin-bottom: 20px;
+        box-shadow: inset 0 2px 4px rgba(255,255,255,0.1);
+        position: relative;
+        z-index: 2;
+    }
+    .stat-icon::after {
+        content: '';
+        position: absolute;
+        width: 100%; height: 100%;
+        border-radius: inherit;
+        filter: blur(10px);
+        z-index: -1;
+        opacity: 0.5;
+    }
+
+    .icon-primary { background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(59, 130, 246, 0.05)); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .icon-primary::after { background: #3b82f6; }
+    
+    .icon-danger { background: linear-gradient(135deg, rgba(239, 68, 68, 0.2), rgba(239, 68, 68, 0.05)); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .icon-danger::after { background: #ef4444; }
+    
+    .icon-success { background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05)); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .icon-success::after { background: #10b981; }
+    
+    .icon-warning { background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.05)); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .icon-warning::after { background: #f59e0b; }
+
     .chart-box {
-        background: white;
-        border-radius: 15px;
-        padding: 20px;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 20px;
+        padding: 24px;
         height: 100%;
+        transition: all 0.3s ease;
     }
-    .trend-up { color: #28a745; }
-    .trend-down { color: #dc3545; }
-    .bg-gradient-primary { background: linear-gradient(45deg, #4e73df, #224abe); color: white; }
-    .bg-gradient-success { background: linear-gradient(45deg, #1cc88a, #13855c); color: white; }
-    .bg-gradient-warning { background: linear-gradient(45deg, #f6c23e, #dda20a); color: white; }
-    .bg-gradient-danger { background: linear-gradient(45deg, #e74a3b, #be2617); color: white; }
+    .chart-box:hover {
+        border-color: rgba(255, 255, 255, 0.1);
+        background: rgba(15, 23, 42, 0.6);
+    }
+    .chart-box h6 {
+        color: var(--vt-text);
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin-bottom: 24px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .chart-box h6 i {
+        color: var(--vt-primary);
+        font-size: 1.2rem;
+    }
+    
+    /* Background Glows */
+    .bg-glow-1 { position: absolute; top: 10%; left: 5%; width: 300px; height: 300px; background: rgba(59, 130, 246, 0.1); filter: blur(100px); border-radius: 50%; z-index: -1; pointer-events: none;}
+    .bg-glow-2 { position: absolute; bottom: 10%; right: 5%; width: 400px; height: 400px; background: rgba(139, 92, 246, 0.08); filter: blur(120px); border-radius: 50%; z-index: -1; pointer-events: none;}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold mb-0">Analytics Dashboard</h2>
-        <button onclick="location.reload()" class="btn btn-outline-primary rounded-pill px-4">
+<div class="bg-glow-1"></div>
+<div class="bg-glow-2"></div>
+
+<div class="container-fluid py-4 position-relative">
+    <div class="d-flex justify-content-between align-items-end mb-5">
+        <div>
+            <div class="text-uppercase tracking-widest text-primary mb-2 small fw-bold" style="letter-spacing: 2px;"><i class="fas fa-chart-line me-2"></i>Live Telemetry</div>
+            <h2 class="dashboard-header-title mb-0">Intelligence Center</h2>
+        </div>
+        <button onclick="location.reload()" class="btn btn-primary rounded-pill px-4 shadow-lg py-2">
             <i class="fas fa-sync-alt me-2"></i>Refresh Data
         </button>
     </div>
 
     <!-- Summary Cards -->
-    <div class="row g-4 mb-4">
-        <div class="col-md-3">
-            <div class="card stat-card shadow-sm h-100 p-3 bg-gradient-primary">
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="small fw-bold opacity-75">TOTAL SCANS</span>
-                    <i class="fas fa-search"></i>
+    <div class="row g-4 mb-5">
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card h-100">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-icon icon-primary"><i class="fas fa-radar"></i></div>
+                        <div class="display-5 fw-bold mb-0 text-white">{{ total_scans }}</div>
+                        <div class="text-white-50 fw-bold mt-2 text-uppercase small" style="letter-spacing: 1px;">Total Scans</div>
+                    </div>
+                    <div class="badge bg-primary bg-opacity-10 text-primary rounded-pill px-3 py-2 border border-primary border-opacity-25">
+                        <i class="fas fa-arrow-up me-1"></i>Active
+                    </div>
                 </div>
-                <div class="h2 fw-bold mb-2">{{ total_scans }}</div>
-                <div class="small">
-                    {% if scan_change >= 0 %}
-                        <i class="fas fa-arrow-up me-1"></i> <span class="fw-bold">{{ scan_change }}</span> increase from last month
-                    {% else %}
-                        <i class="fas fa-arrow-down me-1"></i> <span class="fw-bold">{{ abs_scan_change }}</span> decrease from last month
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card critical h-100">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-icon icon-danger"><i class="fas fa-radiation"></i></div>
+                        <div class="display-5 fw-bold mb-0 text-danger" style="text-shadow: 0 0 20px rgba(239, 68, 68, 0.4);">{{ critical_count }}</div>
+                        <div class="text-white-50 fw-bold mt-2 text-uppercase small" style="letter-spacing: 1px;">Critical Risks</div>
+                    </div>
+                    {% if critical_count > 0 %}
+                    <div class="spinner-grow text-danger spinner-grow-sm mt-2" role="status">
+                        <span class="visually-hidden">Action Required</span>
+                    </div>
                     {% endif %}
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stat-card shadow-sm h-100 p-3 bg-gradient-danger">
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="small fw-bold opacity-75">CRITICAL VULNS</span>
-                    <i class="fas fa-biohazard"></i>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card active h-100">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-icon icon-success"><i class="fas fa-bug"></i></div>
+                        <div class="display-5 fw-bold mb-0 text-success">{{ total_vulns }}</div>
+                        <div class="text-white-50 fw-bold mt-2 text-uppercase small" style="letter-spacing: 1px;">Active Findings</div>
+                    </div>
+                    <div class="text-success small fw-bold">
+                        <i class="fas fa-check-circle me-1"></i>Tracking
+                    </div>
                 </div>
-                <div class="h2 fw-bold mb-2">{{ critical_count }}</div>
-                <div class="small fw-bold">{{ severity_data.high }} High severity issues</div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card stat-card shadow-sm h-100 p-3 bg-gradient-success">
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="small fw-bold opacity-75">TOTAL FINDINGS</span>
-                    <i class="fas fa-shield-alt"></i>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stat-card time h-100">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <div class="stat-icon icon-warning"><i class="fas fa-stopwatch"></i></div>
+                        <div class="display-5 fw-bold mb-0 text-warning">{{ avg_remediation }}<span class="fs-4 text-white-50 ms-1">h</span></div>
+                        <div class="text-white-50 fw-bold mt-2 text-uppercase small" style="letter-spacing: 1px;">Avg MTTR</div>
+                    </div>
+                    <div class="badge bg-warning bg-opacity-10 text-warning rounded-pill px-3 py-2 border border-warning border-opacity-25">
+                        Speed
+                    </div>
                 </div>
-                <div class="h2 fw-bold mb-2">{{ total_vulns }}</div>
-                <div class="small fw-bold">Active security findings</div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="card stat-card shadow-sm h-100 p-3 bg-gradient-warning">
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="small fw-bold opacity-75">AVG REMEDIATION</span>
-                    <i class="fas fa-clock"></i>
-                </div>
-                <div class="h2 fw-bold mb-2 text-dark">{{ avg_remediation }}<span class="h6 mb-0"> hrs</span></div>
-                <div class="small fw-bold text-dark">Time to resolve issues</div>
             </div>
         </div>
     </div>
 
     <!-- Charts Row 1 -->
     <div class="row g-4 mb-4">
-        <div class="col-md-8">
+        <div class="col-lg-8">
             <div class="chart-box">
-                <h6 class="fw-bold mb-4">Scanning Activity (Last 30 Days)</h6>
-                <canvas id="scansChart" height="120"></canvas>
+                <h6><i class="fas fa-chart-area"></i> Threat Detection Timeline (30 Days)</h6>
+                <div style="height: 300px;">
+                    <canvas id="scansChart"></canvas>
+                </div>
             </div>
         </div>
-        <div class="col-md-4">
-            <div class="chart-box">
-                <h6 class="fw-bold mb-4">Severity Distribution</h6>
-                <canvas id="severityChart"></canvas>
+        <div class="col-lg-4">
+            <div class="chart-box d-flex flex-column">
+                <h6><i class="fas fa-chart-pie"></i> Risk Distribution</h6>
+                <div class="flex-grow-1 d-flex align-items-center justify-content-center" style="min-height: 300px;">
+                    <canvas id="severityChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
 
     <!-- Charts Row 2 -->
     <div class="row g-4">
-        <div class="col-md-4">
-            <div class="chart-box">
-                <h6 class="fw-bold mb-4">Scan Types Distribution</h6>
-                <canvas id="typeChart"></canvas>
+        <div class="col-lg-4">
+            <div class="chart-box d-flex flex-column">
+                <h6><i class="fas fa-shield-halved"></i> Scan Engine Utilization</h6>
+                <div class="flex-grow-1 d-flex align-items-center justify-content-center" style="min-height: 300px;">
+                    <canvas id="typeChart"></canvas>
+                </div>
             </div>
         </div>
-        <div class="col-md-8">
+        <div class="col-lg-8">
             <div class="chart-box">
-                <h6 class="fw-bold mb-4">OWASP Top 10 Coverage</h6>
-                <canvas id="owaspChart" height="120"></canvas>
+                <h6><i class="fas fa-spider"></i> Threat Vector Analysis (OWASP)</h6>
+                <div style="height: 300px;">
+                    <canvas id="owaspChart"></canvas>
+                </div>
             </div>
         </div>
     </div>
@@ -125,92 +238,173 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     const chartColors = {
-        critical: '#e74a3b',
-        high: '#f6c23e',
-        medium: '#36b9cc',
-        low: '#1cc88a',
-        info: '#858796',
-        primary: '#4e73df'
+        critical: '#ef4444',
+        high: '#f59e0b',
+        medium: '#fbbf24',
+        low: '#10b981',
+        info: '#0ea5e9',
+        primary: '#3b82f6',
+        accent: '#8b5cf6',
+        text: '#94a3b8',
+        grid: 'rgba(255, 255, 255, 0.05)'
     };
 
-    // Scans Over Time - Line Chart
-    new Chart(document.getElementById('scansChart'), {
-        type: 'line',
-        data: {
-            labels: {{ chart_scans_labels|safe }},
-            datasets: [{
-                label: 'Scans',
-                data: {{ chart_scans_data|safe }},
-                borderColor: chartColors.primary,
-                backgroundColor: 'rgba(78, 115, 223, 0.05)',
-                fill: true,
-                tension: 0.3
-            }]
-        },
-        options: {
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                y: { beginAtZero: true, grid: { borderDash: [2] } },
-                x: { grid: { display: false } }
+    // Global Defaults for Dark Premium Theme
+    Chart.defaults.color = chartColors.text;
+    Chart.defaults.borderColor = chartColors.grid;
+    Chart.defaults.font.family = "'Inter', sans-serif";
+    Chart.defaults.plugins.tooltip.backgroundColor = 'rgba(15, 23, 42, 0.9)';
+    Chart.defaults.plugins.tooltip.titleColor = '#fff';
+    Chart.defaults.plugins.tooltip.padding = 12;
+    Chart.defaults.plugins.tooltip.cornerRadius = 8;
+    Chart.defaults.plugins.tooltip.borderColor = 'rgba(255,255,255,0.1)';
+    Chart.defaults.plugins.tooltip.borderWidth = 1;
+
+    // Scans Over Time
+    const scansCtx = document.getElementById('scansChart');
+    if (scansCtx) {
+        // Create Gradient
+        const ctx = scansCtx.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        gradient.addColorStop(0, 'rgba(59, 130, 246, 0.5)');
+        gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+
+        new Chart(scansCtx, {
+            type: 'line',
+            data: {
+                labels: {{ chart_scans_labels|safe }},
+                datasets: [{
+                    label: 'Scans Initiated',
+                    data: {{ chart_scans_data|safe }},
+                    borderColor: chartColors.primary,
+                    borderWidth: 3,
+                    backgroundColor: gradient,
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#0f172a',
+                    pointBorderColor: chartColors.primary,
+                    pointBorderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    pointHoverBackgroundColor: chartColors.primary
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { 
+                        beginAtZero: true, 
+                        grid: { color: chartColors.grid, drawBorder: false },
+                        ticks: { stepSize: 1, padding: 10 }
+                    },
+                    x: { 
+                        grid: { display: false, drawBorder: false },
+                        ticks: { padding: 10 }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index',
+                },
             }
-        }
-    });
+        });
+    }
 
-    // Severity - Bar Chart
-    new Chart(document.getElementById('severityChart'), {
-        type: 'doughnut',
-        data: {
-            labels: {{ chart_severity_labels|safe }},
-            datasets: [{
-                data: {{ chart_severity_data|safe }},
-                backgroundColor: [chartColors.critical, chartColors.high, chartColors.medium, chartColors.low, chartColors.info],
-                hoverOffset: 4
-            }]
-        },
-        options: {
-            cutout: '70%',
-            plugins: { legend: { position: 'bottom' } }
-        }
-    });
-
-    // Scan Types - Pie Chart
-    new Chart(document.getElementById('typeChart'), {
-        type: 'pie',
-        data: {
-            labels: {{ chart_type_labels|safe }},
-            datasets: [{
-                data: {{ chart_type_data|safe }},
-                backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796'],
-            }]
-        },
-        options: {
-            plugins: { legend: { position: 'bottom' } }
-        }
-    });
-
-    // OWASP - Radar Chart
-    new Chart(document.getElementById('owaspChart'), {
-        type: 'radar',
-        data: {
-            labels: {{ chart_owasp_labels|safe }},
-            datasets: [{
-                label: 'Vulnerabilities',
-                data: {{ chart_owasp_data|safe }},
-                backgroundColor: 'rgba(231, 74, 59, 0.2)',
-                borderColor: '#e74a3b',
-                pointBackgroundColor: '#e74a3b',
-            }]
-        },
-        options: {
-            maintainAspectRatio: false,
-            scales: {
-                r: {
-                    angleLines: { display: true },
-                    suggestedMin: 0
+    // Severity Donut
+    const sevCtx = document.getElementById('severityChart');
+    if (sevCtx) {
+        new Chart(sevCtx, {
+            type: 'doughnut',
+            data: {
+                labels: {{ chart_severity_labels|safe }},
+                datasets: [{
+                    data: {{ chart_severity_data|safe }},
+                    backgroundColor: [chartColors.critical, chartColors.high, chartColors.medium, chartColors.low, chartColors.info],
+                    borderWidth: 2,
+                    borderColor: '#0f172a', /* Match background for nice gaps */
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                layout: { padding: 20 },
+                plugins: { 
+                    legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true, pointStyle: 'circle' } }
                 }
             }
-        }
-    });
+        });
+    }
+
+    // Scan Types
+    const typeCtx = document.getElementById('typeChart');
+    if (typeCtx) {
+        new Chart(typeCtx, {
+            type: 'pie',
+            data: {
+                labels: {{ chart_type_labels|safe }},
+                datasets: [{
+                    data: {{ chart_type_data|safe }},
+                    backgroundColor: [chartColors.primary, chartColors.accent, chartColors.info, chartColors.medium, chartColors.critical, '#334155'],
+                    borderWidth: 2,
+                    borderColor: '#0f172a',
+                    hoverOffset: 10
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                layout: { padding: 20 },
+                plugins: { 
+                    legend: { position: 'bottom', labels: { padding: 20, usePointStyle: true, pointStyle: 'circle' } }
+                }
+            }
+        });
+    }
+
+    // OWASP Radar
+    const owaspCtx = document.getElementById('owaspChart');
+    if (owaspCtx) {
+        new Chart(owaspCtx, {
+            type: 'radar',
+            data: {
+                labels: {{ chart_owasp_labels|safe }},
+                datasets: [{
+                    label: 'Detected Vulnerabilities',
+                    data: {{ chart_owasp_data|safe }},
+                    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+                    borderColor: chartColors.accent,
+                    borderWidth: 2,
+                    pointBackgroundColor: '#0f172a',
+                    pointBorderColor: chartColors.accent,
+                    pointHoverBackgroundColor: chartColors.accent,
+                    pointBorderWidth: 2,
+                    pointRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        grid: { color: 'rgba(255,255,255,0.05)' },
+                        angleLines: { color: 'rgba(255,255,255,0.05)' },
+                        suggestedMin: 0,
+                        pointLabels: { 
+                            font: { size: 11, family: "'Inter', sans-serif" }, 
+                            color: chartColors.text 
+                        },
+                        ticks: { display: false } /* Hide internal numbers for cleaner look */
+                    }
+                },
+                plugins: {
+                    legend: { display: false }
+                }
+            }
+        });
+    }
 </script>
 {% endblock %}

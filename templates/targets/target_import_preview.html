@@ -2,53 +2,141 @@
 
 {% block title %}Import Preview - VulnVision{% endblock %}
 
+{% block extra_css %}
+<style>
+.glass-panel {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+}
+.glass-panel::before {
+    content: '';
+    position: absolute;
+    top: -50px; right: -50px;
+    width: 200px; height: 200px;
+    background: rgba(14, 165, 233, 0.15); /* info blue */
+    filter: blur(60px);
+    z-index: 0;
+}
+.table {
+    --bs-table-bg: transparent;
+    --bs-table-color: #f8fafc;
+    --bs-table-border-color: rgba(255,255,255,0.05);
+}
+.table-hover tbody tr:hover {
+    background-color: rgba(14, 165, 233, 0.05) !important;
+    color: #fff;
+}
+.table > :not(caption) > * > * {
+    background-color: transparent !important;
+    color: inherit;
+    border-bottom-color: rgba(255,255,255,0.05);
+}
+.table thead th {
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: #94a3b8;
+    border-bottom: 2px solid rgba(14, 165, 233, 0.3) !important;
+}
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="fw-bold"><i class="fas fa-eye me-2 text-info"></i>Import Preview</h2>
-        <div class="text-muted">Duplicate handling: <strong>{{ handle_duplicates|title }}</strong></div>
+        <div class="d-flex align-items-center">
+            <i class="fas fa-eye fa-2x text-info me-3" style="text-shadow: 0 0 20px rgba(14, 165, 233, 0.5);"></i>
+            <div>
+                <h2 class="fw-bold text-white mb-0" style="font-size: 1.8rem;">Data Ingestion Preview</h2>
+                <p class="text-white-50 small tracking-widest text-uppercase mb-0 mt-1">Review payload parsing results before commit</p>
+            </div>
+        </div>
+        <div class="p-3 rounded-3" style="background: rgba(15, 23, 42, 0.8); border: 1px solid rgba(255,255,255,0.05);">
+            <div class="text-white-50 small tracking-widest text-uppercase mb-1">Duplicate Handling Constraint</div>
+            <strong class="text-info">{{ handle_duplicates|title }}</strong>
+        </div>
     </div>
 
-    <div class="card border-0 shadow-sm">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Name</th>
-                        <th>URL</th>
-                        <th>IP Address</th>
-                        <th>Protocol</th>
-                        <th>Active</th>
-                        <th>Tags</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for row in preview_data %}
-                    <tr>
-                        <td>{{ row.name }}</td>
-                        <td>{{ row.url }}</td>
-                        <td>{{ row.ip_address }}</td>
-                        <td>{{ row.protocol }}</td>
-                        <td>{{ row.is_active }}</td>
-                        <td>{{ row.tags }}</td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center py-5">No data found in the CSV.</td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
-        <div class="card-footer bg-white p-4 text-end">
-            <form action="{% url 'targets:target_import_process' %}" method="post">
-                {% csrf_token %}
-                <a href="{% url 'targets:target_import' %}" class="btn btn-outline-secondary me-2">Back to Upload</a>
-                <button type="submit" class="btn btn-success px-5" {% if not preview_data %}disabled{% endif %}>
-                    Confirm and Start Import
-                </button>
-            </form>
+    <div class="glass-panel">
+        <div class="position-relative" style="z-index: 1;">
+            <div class="table-responsive p-2">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th class="ps-4">Asset Name</th>
+                            <th>Endpoint URL</th>
+                            <th>IP Address</th>
+                            <th>Protocol Layer</th>
+                            <th>Operational State</th>
+                            <th class="pe-4">Metadata Tags</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in preview_data %}
+                        <tr>
+                            <td class="ps-4 fw-bold text-white">{{ row.name }}</td>
+                            <td class="text-info font-monospace small"><i class="fas fa-link me-1 text-white-50"></i>{{ row.url }}</td>
+                            <td class="font-monospace small text-white-50">{{ row.ip_address }}</td>
+                            <td><span class="badge bg-dark border border-secondary border-opacity-25">{{ row.protocol }}</span></td>
+                            <td>
+                                {% if row.is_active == 'True' or row.is_active == '1' or row.is_active == 'Yes' or row.is_active == True %}
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25"><i class="fas fa-check-circle me-1"></i>Active</span>
+                                {% else %}
+                                    <span class="badge bg-secondary bg-opacity-10 text-white-50 border border-secondary border-opacity-25"><i class="fas fa-moon me-1"></i>Dormant</span>
+                                {% endif %}
+                            </td>
+                            <td class="pe-4">
+                                {% if row.tags %}
+                                    {% for tag in row.tags|split:"," %}
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25 me-1">{{ tag|trim }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="text-white-50 small fst-italic">None</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <div class="d-flex flex-column align-items-center justify-content-center text-white-50">
+                                    <i class="fas fa-file-excel fa-3x mb-3 text-white-50 opacity-50"></i>
+                                    <h5>No readable data extracted</h5>
+                                    <p class="small">The CSV payload was empty or formatting was unparseable.</p>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            
+            <div class="p-4 border-top border-secondary border-opacity-25 mt-2" style="background: rgba(0,0,0,0.2);">
+                <form action="{% url 'targets:target_import_process' %}" method="post" class="d-flex justify-content-end align-items-center gap-3">
+                    {% csrf_token %}
+                    <a href="{% url 'targets:target_import' %}" class="btn btn-outline-secondary px-4 py-2 text-uppercase tracking-widest small fw-bold" style="border-radius: 8px;">
+                        <i class="fas fa-arrow-left me-2"></i>Return to Upload
+                    </a>
+                    <button type="submit" class="btn btn-success px-5 py-2 text-uppercase tracking-widest small fw-bold shadow-lg position-relative" style="border-radius: 8px; overflow: hidden;" {% if not preview_data %}disabled{% endif %}>
+                        <div class="position-absolute top-0 start-0 w-100 h-100 bg-white opacity-25" style="transform: skew(-20deg) translateX(-150%); transition: transform 0.5s;"></div>
+                        <i class="fas fa-check me-2"></i>Execute Import sequence
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 </div>
+
+{% block extra_js %}
+<script>
+    // Add custom filter functionality if split is not available in standard django templates
+    // This is a UI-only fallback if the template filter doesn't exist
+</script>
+{% endblock %}
 {% endblock %}

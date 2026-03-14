@@ -130,9 +130,9 @@ def home(request):
         
     # Chart Data: Scans Over Time (Last 30 days)
     last_30_days = today - timedelta(days=30)
-    scans_over_time = scans.filter(created_at__gte=last_30_days).extra(select={'day': "date(created_at)"}).values('day').annotate(count=Count('id')).order_by('day')
+    scans_over_time = scans.filter(created_at__gte=last_30_days).values('created_at__date').annotate(count=Count('id')).order_by('created_at__date')
     
-    chart_scans_labels = [item['day'] for item in scans_over_time]
+    chart_scans_labels = [str(item['created_at__date']) for item in scans_over_time]
     chart_scans_data = [item['count'] for item in scans_over_time]
     
     # Chart Data: Category Distribution (Scan Type)
@@ -173,3 +173,49 @@ def custom_logout(request):
     logout(request)
     messages.info(request, "You have been logged out.")
     return redirect('login')
+
+@login_required
+def settings_view(request):
+    user = request.user
+    profile = user.profile
+    settings = user.settings
+    
+    if request.method == 'POST':
+        action = request.POST.get('action')
+        
+        if action == 'profile':
+            user.full_name = request.POST.get('full_name', '')
+            user.company = request.POST.get('company', '')
+            user.save()
+            
+            profile.bio = request.POST.get('bio', '')
+            profile.phone_number = request.POST.get('phone_number', '')
+            profile.location = request.POST.get('location', '')
+            profile.save()
+            messages.success(request, 'Profile updated successfully.')
+            
+        elif action == 'preferences':
+            settings.theme = request.POST.get('theme', 'dark')
+            settings.enable_ai_remediation = request.POST.get('enable_ai_remediation') == 'on'
+            settings.webhook_url = request.POST.get('webhook_url', '')
+            settings.save()
+            messages.success(request, 'Preferences saved.')
+            
+        elif action == 'integration':
+            settings.zap_api_key = request.POST.get('zap_api_key', '')
+            settings.zap_proxy_url = request.POST.get('zap_proxy_url', 'http://localhost:8080')
+            settings.save()
+            messages.success(request, 'Tool integration settings updated.')
+            
+        elif action == 'notifications':
+            settings.email_notifications = request.POST.get('email_notifications') == 'on'
+            settings.scan_complete_alerts = request.POST.get('scan_complete_alerts') == 'on'
+            settings.save()
+            messages.success(request, 'Notification settings updated.')
+            
+        return redirect('settings')
+        
+    return render(request, 'core/settings.html', {
+        'profile': profile,
+        'settings': settings
+    })

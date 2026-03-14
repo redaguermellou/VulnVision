@@ -3,24 +3,88 @@
 
 {% block title %}Import Targets - VulnVision{% endblock %}
 
+{% block extra_css %}
+<style>
+.glass-panel {
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 20px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+    position: relative;
+    overflow: hidden;
+}
+.glass-panel::before {
+    content: '';
+    position: absolute;
+    top: -50px; left: -50px;
+    width: 200px; height: 200px;
+    background: rgba(16, 185, 129, 0.15); /* matching success green */
+    filter: blur(60px);
+    z-index: 0;
+}
+.form-control, .form-control[type="file"] {
+    background: rgba(15, 23, 42, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+    transition: all 0.3s ease;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+}
+.form-control:focus {
+    border-color: rgba(16, 185, 129, 0.5) !important;
+    box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2) !important;
+    background: rgba(15, 23, 42, 0.9) !important;
+}
+label {
+    color: #94a3b8 !important;
+    font-weight: 500;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card border-0 shadow-sm">
-                <div class="card-body p-5">
-                    <h3 class="fw-bold mb-4"><i class="fas fa-file-import me-2 text-success"></i>Import Targets</h3>
-                    <p class="text-muted mb-4">Upload a CSV file to bulk import targets. You can download our template below to ensure the correct format.</p>
+    <div class="row w-100 justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="glass-panel my-4 border-success border-opacity-10">
+                <div class="p-5 position-relative" style="z-index: 1;">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="d-inline-block position-relative me-3">
+                            <div class="position-absolute top-50 start-50 translate-middle" style="width: 50px; height: 50px; background: rgba(16, 185, 129, 0.2); filter: blur(15px); border-radius: 50%;"></div>
+                            <i class="fas fa-file-import fa-2x text-success position-relative" style="text-shadow: 0 0 20px rgba(16, 185, 129, 0.5);"></i>
+                        </div>
+                        <div>
+                            <h3 class="fw-bold text-white mb-0" style="font-size: 1.8rem;">Mass Target Ingestion</h3>
+                            <p class="text-white-50 small tracking-widest text-uppercase mb-0 mt-1">Import assets seamlessly via CSV format</p>
+                        </div>
+                    </div>
+                    
+                    <hr class="border-secondary opacity-25 mb-4">
+                    
+                    <div class="p-3 mb-4 rounded border border-success border-opacity-25 bg-success bg-opacity-10 text-success small">
+                        <i class="fas fa-info-circle me-2"></i> Ensure your document aligns with the required payload parameters prior to upload.
+                    </div>
                     
                     <form method="post" enctype="multipart/form-data">
                         {% csrf_token %}
-                        {{ form|crispy }}
-                        <div class="d-grid gap-2 mt-4">
-                            <button type="submit" class="btn btn-primary py-2">Upload and Preview</button>
-                            <a href="{% url 'targets:target_template' %}" class="btn btn-outline-secondary py-2">
-                                <i class="fas fa-download me-2"></i>Download CSV Template
+                        <div class="mb-5">
+                            {{ form|crispy }}
+                        </div>
+                        
+                        <div class="d-flex flex-column gap-3 pt-3 border-top border-secondary border-opacity-25">
+                            <button type="submit" class="btn text-uppercase tracking-widest small fw-bold py-3 shadow-lg" style="background: rgba(16, 185, 129, 0.8); border: 1px solid #10b981; color: white; border-radius: 8px;">
+                                <i class="fas fa-cloud-upload-alt me-2"></i>Analyze & Preview Payload
+                            </button>
+                            <a href="{% url 'targets:target_template' %}" class="btn btn-outline-info text-uppercase tracking-widest small fw-bold py-3" style="border-radius: 8px;">
+                                <i class="fas fa-download me-2"></i>Fetch Reference Matrix (CSV)
                             </a>
-                            <a href="{% url 'targets:target_list' %}" class="btn btn-link text-muted">Cancel</a>
+                            <a href="{% url 'targets:target_list' %}" class="btn btn-link text-white-50 text-decoration-none text-uppercase tracking-widest small fw-bold mt-2 hover:text-white transition-colors">
+                                Abort Operation
+                            </a>
                         </div>
                     </form>
                 </div>

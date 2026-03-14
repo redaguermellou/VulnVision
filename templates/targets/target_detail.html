@@ -2,118 +2,200 @@
 
 {% block title %}{{ target.name }} Details - VulnVision{% endblock %}
 
+{% block extra_css %}
+<style>
+    .glass-panel {
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    .glass-panel:hover {
+        background: rgba(30, 41, 59, 0.6);
+        box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+    }
+
+    .nav-tabs .nav-link {
+        color: #94a3b8;
+        border: none;
+        border-bottom: 2px solid transparent;
+        padding: 1rem 1.5rem;
+        background: transparent;
+        transition: all 0.2s;
+    }
+    .nav-tabs .nav-link:hover { color: #fff; border-color: transparent; background: rgba(255,255,255,0.02); }
+    .nav-tabs .nav-link.active {
+        color: var(--vt-primary);
+        background: transparent;
+        border-color: transparent transparent var(--vt-primary) transparent;
+        text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    }
+    
+    .table-borderless td, .table-borderless th {
+        background: transparent !important;
+        border: none;
+        color: #e2e8f0;
+        padding-top: 0.75rem;
+        padding-bottom: 0.75rem;
+    }
+    .table-borderless th { color: #94a3b8; font-weight: 600; }
+</style>
+{% endblock %}
+
 {% block content %}
-<div class="container-fluid py-4">
+<div class="container-fluid py-4 position-relative">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-starts mb-4">
+    <div class="d-flex justify-content-between align-items-starts mb-5">
         <div>
             <nav aria-label="breadcrumb">
-                <ol class="breadcrumb mb-1">
-                    <li class="breadcrumb-item"><a href="{% url 'targets:target_list' %}">Targets</a></li>
-                    <li class="breadcrumb-item active">{{ target.name }}</li>
+                <ol class="breadcrumb mb-2 font-monospace small">
+                    <li class="breadcrumb-item"><a href="{% url 'targets:target_list' %}" class="text-white-50 text-decoration-none">Targets</a></li>
+                    <li class="breadcrumb-item active text-primary">{{ target.name }}</li>
                 </ol>
             </nav>
-            <h2 class="fw-bold mb-0">{{ target.name }}</h2>
-            <div class="text-muted small">{{ target.url }}</div>
+            <h2 class="fw-bold mb-0" style="font-size: 2.2rem; background: linear-gradient(135deg, #fff 0%, #94a3b8 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;">{{ target.name }}</h2>
+            <div class="mt-2 font-monospace text-info bg-info bg-opacity-10 px-2 py-1 rounded d-inline-block">{{ target.url }}</div>
         </div>
-        <div class="btn-group">
+        <div class="d-flex gap-2 shadow-sm">
             <a href="{% url 'targets:target_update' target.pk %}" class="btn btn-outline-warning">
-                <i class="fas fa-edit me-1"></i>Edit
+                <i class="fas fa-edit me-2"></i>Edit Configuration
             </a>
-            <button class="btn btn-primary">
-                <i class="fas fa-play me-1"></i>Run Scan
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#runScanModal">
+                <i class="fas fa-bolt me-2"></i>Execute Scan
             </button>
         </div>
     </div>
 
     <!-- Stats Row -->
-    <div class="row g-4 mb-4">
+    <div class="row g-4 mb-5">
         <div class="col-md-4">
-            <div class="card border-0 shadow-sm text-center p-3">
-                <div class="text-muted small text-uppercase fw-bold">Total Scans</div>
-                <div class="h3 fw-bold mb-0 text-primary">{{ target.get_scan_count }}</div>
+            <div class="glass-panel text-center p-4 h-100 d-flex flex-column justify-content-center">
+                <div class="text-white-50 small text-uppercase fw-bold tracking-widest mb-2" style="letter-spacing: 2px;">Total Scans</div>
+                <div class="display-5 fw-bold mb-0 text-primary" style="text-shadow: 0 0 20px rgba(59, 130, 246, 0.4);">{{ target.get_scan_count }}</div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card border-0 shadow-sm text-center p-3">
-                <div class="text-muted small text-uppercase fw-bold">Vulnerabilities</div>
-                <div class="h3 fw-bold mb-0 text-danger">{{ target.get_vulnerability_count }}</div>
+            <div class="glass-panel text-center p-4 h-100 d-flex flex-column justify-content-center">
+                <div class="text-white-50 small text-uppercase fw-bold tracking-widest mb-2" style="letter-spacing: 2px;">Vulnerabilities</div>
+                <div class="display-5 fw-bold mb-0 text-danger" style="text-shadow: 0 0 20px rgba(248, 81, 73, 0.4);">{{ target.get_vulnerability_count }}</div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="card border-0 shadow-sm text-center p-3">
-                <div class="text-muted small text-uppercase fw-bold">Last Scan</div>
-                <div class="h3 fw-bold mb-0 text-dark">
-                    {% if target.get_last_scan %}{{ target.get_last_scan|date:"M d" }}{% else %}N/A{% endif %}
+            <div class="glass-panel text-center p-4 h-100 d-flex flex-column justify-content-center">
+                <div class="text-white-50 small text-uppercase fw-bold tracking-widest mb-2" style="letter-spacing: 2px;">Last Assessment</div>
+                <div class="h3 fw-bold mb-0 text-white mt-1">
+                    {% if target.get_last_scan %}
+                        <i class="fas fa-calendar-check text-success me-2"></i>{{ target.get_last_scan|date:"M d, Y" }}
+                    {% else %}
+                        <span class="text-white-50 font-monospace fs-5">Pending...</span>
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Tabs Container -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-header bg-white border-bottom-0 pt-3">
-            <ul class="nav nav-tabs card-header-tabs" id="targetTabs" role="tablist">
+    <div class="glass-panel overflow-hidden shadow-lg mb-5">
+        <div class="card-header bg-transparent border-bottom border-light border-opacity-10 pt-3">
+            <ul class="nav nav-tabs card-header-tabs border-bottom-0" id="targetTabs" role="tablist">
                 <li class="nav-item">
-                    <button class="nav-link active fw-bold" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab">Information</button>
+                    <button class="nav-link active fw-bold text-uppercase tracking-widest small" id="info-tab" data-bs-toggle="tab" data-bs-target="#info" type="button" role="tab"><i class="fas fa-info-circle me-2"></i>Information</button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link fw-bold" id="scans-tab" data-bs-toggle="tab" data-bs-target="#scans" type="button" role="tab">Scans</button>
+                    <button class="nav-link fw-bold text-uppercase tracking-widest small" id="scans-tab" data-bs-toggle="tab" data-bs-target="#scans" type="button" role="tab"><i class="fas fa-radar me-2"></i>Scan History</button>
                 </li>
                 <li class="nav-item">
-                    <button class="nav-link fw-bold text-danger" id="vulns-tab" data-bs-toggle="tab" data-bs-target="#vulns" type="button" role="tab">Vulnerabilities</button>
+                    <button class="nav-link fw-bold text-uppercase tracking-widest small" id="vulns-tab" data-bs-toggle="tab" data-bs-target="#vulns" type="button" role="tab"><i class="fas fa-bug me-2"></i>Findings</button>
                 </li>
             </ul>
         </div>
-        <div class="card-body p-4">
+        <div class="card-body p-0 bg-transparent border-0">
             <div class="tab-content" id="targetTabsContent">
                 <!-- Info Tab -->
-                <div class="tab-pane fade show active" id="info" role="tabpanel">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="text-uppercase text-muted small fw-bold mb-3">Target Configuration</h6>
-                            <table class="table table-sm table-borderless">
-                                <tr><th width="150">Name:</th><td>{{ target.name }}</td></tr>
-                                <tr><th>URL:</th><td><a href="{{ target.url }}" target="_blank">{{ target.url }} <i class="fas fa-external-link-alt small"></i></a></td></tr>
-                                <tr><th>IP Address:</th><td>{{ target.ip_address|default:"Not specified" }}</td></tr>
-                                <tr><th>Protocol:</th><td><span class="badge bg-secondary">{{ target.protocol|upper }}</span></td></tr>
-                                <tr><th>Status:</th><td>
-                                    {% if target.is_active %}<span class="badge bg-success">Active</span>{% else %}<span class="badge bg-danger">Inactive</span>{% endif %}
+                <div class="tab-pane fade show active p-4 py-5" id="info" role="tabpanel">
+                    <div class="row g-5">
+                        <div class="col-md-6 border-end border-light border-opacity-10">
+                            <h6 class="text-uppercase text-white small fw-bold tracking-widest mb-4"><i class="fas fa-sliders-h me-2 text-primary"></i>Target Configuration</h6>
+                            <table class="table table-borderless">
+                                <tr><th width="150"><i class="fas fa-id-badge text-white-50 me-2"></i>Name</th><td><span class="fw-bold text-white">{{ target.name }}</span></td></tr>
+                                <tr><th><i class="fas fa-link text-white-50 me-2"></i>URL</th><td><a href="{{ target.url }}" target="_blank" class="text-info text-decoration-none">{{ target.url }} <i class="fas fa-external-link-alt small ms-1"></i></a></td></tr>
+                                <tr><th><i class="fas fa-network-wired text-white-50 me-2"></i>IP Address</th><td><code class="text-primary bg-primary bg-opacity-10 px-2 py-1 rounded">{{ target.ip_address|default:"Auto-discovery enabled" }}</code></td></tr>
+                                <tr><th><i class="fas fa-project-diagram text-white-50 me-2"></i>Protocol</th><td><span class="badge border border-secondary text-uppercase px-3 py-2 text-white-50 fw-bold" style="background: rgba(15, 23, 42, 0.8);">{{ target.protocol|upper }}</span></td></tr>
+                                <tr><th><i class="fas fa-heartbeat text-white-50 me-2"></i>Status</th><td>
+                                    {% if target.is_active %}<span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1"><i class="fas fa-check-circle me-1"></i>Active</span>{% else %}<span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25 px-2 py-1"><i class="fas fa-times-circle me-1"></i>Inactive</span>{% endif %}
                                 </td></tr>
                             </table>
                         </div>
                         <div class="col-md-6">
-                            <h6 class="text-uppercase text-muted small fw-bold mb-3">Metatdata</h6>
-                            <p class="mb-2"><strong>Tags:</strong> 
+                            <h6 class="text-uppercase text-white small fw-bold tracking-widest mb-4"><i class="fas fa-tags me-2 text-primary"></i>Metadata</h6>
+                            <div class="mb-4">
+                                <span class="d-block text-white-50 fw-bold mb-2">Classification Tags</span>
                                 {% if target.tags %}
+                                    <div class="d-flex flex-wrap gap-2">
                                     {% for tag in target.tags.split %}
-                                        <span class="badge bg-light text-primary border me-1">{{ tag }}</span>
+                                        <span class="badge border border-primary text-primary px-3 py-2" style="background: rgba(59, 130, 246, 0.1);">{{ tag }}</span>
                                     {% endfor %}
+                                    </div>
                                 {% else %}
-                                    <span class="text-muted italic">No tags</span>
+                                    <span class="text-white-50 font-monospace small">No tags assigned</span>
                                 {% endif %}
-                            </p>
-                            <p class="mb-2"><strong>Added On:</strong> {{ target.created_at|date:"F d, Y @ H:i" }}</p>
-                            <p><strong>Description:</strong><br>
-                                <span class="text-muted">{{ target.description|default:"No description provided." }}</span>
-                            </p>
+                            </div>
+                            <div class="mb-4">
+                                <span class="d-block text-white-50 fw-bold mb-1">Provisioned On</span>
+                                <span class="text-white"><i class="far fa-calendar-alt text-white-50 me-2"></i>{{ target.created_at|date:"F d, Y @ H:i" }}</span>
+                            </div>
+                            <div>
+                                <span class="d-block text-white-50 fw-bold mb-2">Architectural Notes</span>
+                                <div class="p-3 rounded-3 border border-secondary border-opacity-25" style="background: rgba(0,0,0,0.2);">
+                                    <span class="text-light">{{ target.description|default:"No description provided for this target asset." }}</span>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Scans Tab Placeholder -->
-                <div class="tab-pane fade text-center py-5" id="scans" role="tabpanel">
-                    <i class="fas fa-microscope fa-4x mb-3 text-muted opacity-25"></i>
-                    <h5>No scans recorded for this target</h5>
-                    <p class="text-muted">Click the "Run Scan" button to start your first assessment.</p>
+                <div class="tab-pane fade text-center py-5 my-5" id="scans" role="tabpanel">
+                    <div class="position-relative d-inline-block mb-4">
+                        <div class="position-absolute top-50 start-50 translate-middle" style="width: 100px; height: 100px; background: rgba(59, 130, 246, 0.1); filter: blur(20px); border-radius: 50%;"></div>
+                        <i class="fas fa-radar fa-4x text-white-50 position-relative"></i>
+                    </div>
+                    <h4 class="text-white fw-bold mb-3">No Scan History</h4>
+                    <p class="text-white-50 w-50 mx-auto">This target has not been assessed yet. Initiate an execution to begin discovering vulnerabilities.</p>
                 </div>
                 
                 <!-- Vulns Tab Placeholder -->
-                <div class="tab-pane fade text-center py-5" id="vulns" role="tabpanel">
-                    <i class="fas fa-shield-virus fa-4x mb-3 text-muted opacity-25"></i>
-                    <h5 class="text-danger">Clean slate!</h5>
-                    <p class="text-muted">No security vulnerabilities have been identified on this target yet.</p>
+                <div class="tab-pane fade text-center py-5 my-5" id="vulns" role="tabpanel">
+                    <div class="position-relative d-inline-block mb-4">
+                        <div class="position-absolute top-50 start-50 translate-middle" style="width: 100px; height: 100px; background: rgba(34, 197, 94, 0.1); filter: blur(20px); border-radius: 50%;"></div>
+                        <i class="fas fa-shield-virus fa-4x text-success position-relative" style="text-shadow: 0 0 20px rgba(34, 197, 94, 0.5);"></i>
+                    </div>
+                    <h4 class="text-white fw-bold mb-3">Clean Slate</h4>
+                    <p class="text-white-50 w-50 mx-auto">No security vulnerabilities have been identified for this target domain.</p>
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Run Scan Modal Placeholder (You can add the actual form if needed, or redirect to a scan creation view) -->
+<div class="modal fade" id="runScanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);">
+            <div class="modal-header border-secondary border-opacity-25">
+                <h5 class="modal-title fw-bold text-white"><i class="fas fa-bolt text-primary me-2"></i>Execute New Assessment</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <p class="text-white-50">Are you sure you want to execute a scan against <strong>{{ target.name }}</strong>?</p>
+                <form action="{% url 'targets:target_scan_trigger' target.pk %}" method="post" class="mt-4">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-primary w-100 py-2 fw-bold tracking-widest"><i class="fas fa-play me-2"></i>CONFIRM EXECUTION</button>
+                    <button type="button" class="btn btn-outline-secondary w-100 py-2 mt-2" data-bs-dismiss="modal">Cancel</button>
+                </form>
             </div>
         </div>
     </div>
