@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}Report Builder - VulnVision{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-dark text-white p-4 rounded-top-4">
+                    <h4 class="fw-bold mb-0"><i class="fas fa-file-invoice me-2"></i>Report Builder</h4>
+                    <p class="text-white-50 small mb-0 mt-1">Configure and export your security findings report</p>
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-uppercase">Report Scope</label>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">Filter by Target</label>
+                                    <select name="target" class="form-select">
+                                        <option value="">All Targets</option>
+                                        {% for t in targets %}
+                                        <option value="{{ t.id }}">{{ t.name }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small text-muted">Filter by Severity</label>
+                                    <select name="severity" class="form-select">
+                                        <option value="">All Severities</option>
+                                        {% for val, label in severity_choices %}
+                                        <option value="{{ val }}">{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label fw-bold small text-uppercase">Export Format</label>
+                            <div class="d-flex gap-3">
+                                <div class="form-check card border p-3 flex-fill text-center">
+                                    <input class="form-check-input d-none" type="radio" name="format" id="fmtPdf" value="pdf" checked>
+                                    <label class="form-check-label stretched-link cursor-pointer" for="fmtPdf">
+                                        <i class="fas fa-file-pdf fa-2x text-danger mb-2"></i>
+                                        <div class="fw-bold">PDF Document</div>
+                                        <div class="small text-muted">Professional Layout</div>
+                                    </label>
+                                </div>
+                                <div class="form-check card border p-3 flex-fill text-center">
+                                    <input class="form-check-input d-none" type="radio" name="format" id="fmtCsv" value="csv">
+                                    <label class="form-check-label stretched-link cursor-pointer" for="fmtCsv">
+                                        <i class="fas fa-file-csv fa-2x text-success mb-2"></i>
+                                        <div class="fw-bold">CSV Spreadsheet</div>
+                                        <div class="small text-muted">Raw Data Analysis</div>
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-dark btn-lg rounded-pill p-3 fw-bold">
+                                <i class="fas fa-download me-2"></i>Generate & Download Report
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="mt-4 text-center">
+                <p class="text-muted small">
+                    <i class="fas fa-info-circle me-1"></i> Reports include an executive summary, technical details, and vulnerability history.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .cursor-pointer { cursor: pointer; }
+    .form-check-input:checked + .form-check-label {
+        background-color: #f8f9fa;
+        border-color: #2c3e50;
+    }
+</style>
+{% endblock %}

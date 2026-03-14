@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+
+{% block title %}OWASP Results - {{ scan.target.name }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'scans:owasp_scan_list' %}" class="text-decoration-none">OWASP Scans</a></li>
+            <li class="breadcrumb-item active">{{ scan.target.name }} Results</li>
+        </ol>
+    </nav>
+
+    <div class="row g-4">
+        <!-- Summary Dashboard -->
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold text-dark mb-4">OWASP Top 10 Coverage</h5>
+                    <canvas id="owaspRadarChart" height="300"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm rounded-4 h-100">
+                <div class="card-body p-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h5 class="fw-bold text-dark mb-0">Category Breakdown</h5>
+                    </div>
+                    
+                    <div class="row g-3">
+                        {% for stat in category_stats %}
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded-3 border-start border-4 border-{% if stat.count > 5 %}danger{% elif stat.count > 0 %}warning{% else %}success{% endif %}">
+                                <div class="text-muted small fw-bold">{{ stat.owasp_category }}</div>
+                                <div class="fs-4 fw-bold text-dark">{{ stat.count }} Findings</div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="col-12 text-center py-5 text-muted">
+                            No categorized findings yet.
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Detailed Alerts -->
+        <div class="col-12">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white p-4 border-0">
+                    <h5 class="fw-bold text-dark mb-0">Detailed Findings List</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="accordion accordion-flush" id="findingAccordion">
+                        {% for alert in alerts %}
+                        <div class="accordion-item border-top">
+                            <h2 class="accordion-header">
+                                <button class="accordion-button collapsed py-3" type="button" data-bs-toggle="collapse" data-bs-target="#alert-{{ alert.id }}">
+                                    <div class="d-flex w-100 align-items-center">
+                                        <span class="badge bg-{% if alert.risk == 'High' %}danger{% elif alert.risk == 'Medium' %}warning{% else %}secondary{% endif %} rounded-pill me-3 px-3">
+                                            {{ alert.risk }}
+                                        </span>
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold text-dark">{{ alert.alert }}</div>
+                                            <div class="text-muted small">{{ alert.url|truncatechars:80 }}</div>
+                                        </div>
+                                        <div class="me-3 text-muted small px-3 bg-light rounded-pill">
+                                            {{ alert.owasp_category|default:"Uncategorized" }}
+                                        </div>
+                                    </div>
+                                </button>
+                            </h2>
+                            <div id="alert-{{ alert.id }}" class="accordion-collapse collapse" data-bs-parent="#findingAccordion">
+                                <div class="accordion-body p-4 bg-light">
+                                    <div class="row g-4">
+                                        <div class="col-md-8">
+                                            <h6 class="fw-bold text-dark mb-2">Description</h6>
+                                            <p class="text-muted small">{{ alert.description|safe }}</p>
+                                            
+                                            <h6 class="fw-bold text-dark mb-2">Remediation</h6>
+                                            <p class="text-success small">{{ alert.solution|safe }}</p>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="card border-0 rounded-3 p-3">
+                                                <div class="mb-2">
+                                                    <span class="text-muted small fw-bold">Evidence:</span>
+                                                    <code class="d-block mt-1 p-2 bg-dark text-white rounded">{{ alert.evidence|default:"N/A" }}</code>
+                                                </div>
+                                                <div class="mb-2">
+                                                    <span class="text-muted small fw-bold">Parameter:</span>
+                                                    <span class="text-dark d-block">{{ alert.param|default:"N/A" }}</span>
+                                                </div>
+                                                <div class="mb-0">
+                                                    <span class="text-muted small fw-bold">CWE ID:</span>
+                                                    <span class="badge bg-dark rounded-pill">{{ alert.cweid }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const ctx = document.getElementById('owaspRadarChart').getContext('2d');
+    const labels = [
+        'Broken Access Control', 'Cryptographic Failures', 'Injection', 'Insecure Design',
+        'Security Misconfiguration', 'Outdated Components', 'Auth Failures',
+        'Data Integrity', 'Logging Failures', 'SSRF'
+    ];
+    
+    // Process data from category_stats
+    const categoryDataMap = {
+        'A01': 0, 'A02': 0, 'A03': 0, 'A04': 0, 'A05': 0,
+        'A06': 0, 'A07': 0, 'A08': 0, 'A09': 0, 'A10': 0
+    };
+    
+    {% for stat in category_stats %}
+        {% if 'A01' in stat.owasp_category %} categoryDataMap['A01'] = {{ stat.count }}; {% endif %}
+        {% if 'A02' in stat.owasp_category %} categoryDataMap['A02'] = {{ stat.count }}; {% endif %}
+        {% if 'A03' in stat.owasp_category %} categoryDataMap['A03'] = {{ stat.count }}; {% endif %}
+        {% if 'A04' in stat.owasp_category %} categoryDataMap['A04'] = {{ stat.count }}; {% endif %}
+        {% if 'A05' in stat.owasp_category %} categoryDataMap['A05'] = {{ stat.count }}; {% endif %}
+        {% if 'A06' in stat.owasp_category %} categoryDataMap['A06'] = {{ stat.count }}; {% endif %}
+        {% if 'A07' in stat.owasp_category %} categoryDataMap['A07'] = {{ stat.count }}; {% endif %}
+        {% if 'A08' in stat.owasp_category %} categoryDataMap['A08'] = {{ stat.count }}; {% endif %}
+        {% if 'A09' in stat.owasp_category %} categoryDataMap['A09'] = {{ stat.count }}; {% endif %}
+        {% if 'A10' in stat.owasp_category %} categoryDataMap['A10'] = {{ stat.count }}; {% endif %}
+    {% endfor %}
+
+    const activeData = [
+        categoryDataMap['A01'], categoryDataMap['A02'], categoryDataMap['A03'], categoryDataMap['A04'],
+        categoryDataMap['A05'], categoryDataMap['A06'], categoryDataMap['A07'], categoryDataMap['A08'],
+        categoryDataMap['A09'], categoryDataMap['A10']
+    ];
+
+    new Chart(ctx, {
+        type: 'radar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Findings per Category',
+                data: activeData,
+                backgroundColor: 'rgba(78, 115, 223, 0.2)',
+                borderColor: 'rgba(78, 115, 223, 1)',
+                borderWidth: 2,
+                pointBackgroundColor: 'rgba(78, 115, 223, 1)',
+            }]
+        },
+        options: {
+            scales: {
+                r: {
+                    beginAtZero: true,
+                    ticks: { display: false }
+                }
+            },
+            plugins: {
+                legend: { display: false }
+            }
+        }
+    });
+</script>
+{% endblock %}

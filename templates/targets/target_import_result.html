@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+
+{% block title %}Import Result - VulnVision{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-5">
+                    <h3 class="fw-bold mb-4 text-center">Import Summary</h3>
+                    
+                    <div class="row g-4 mb-5">
+                        <div class="col-md-4">
+                            <div class="p-4 bg-light rounded text-center">
+                                <h2 class="fw-bold text-success mb-0">{{ success_count }}</h2>
+                                <small class="text-muted text-uppercase">New Targets</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-4 bg-light rounded text-center">
+                                <h2 class="fw-bold text-info mb-0">{{ update_count }}</h2>
+                                <small class="text-muted text-uppercase">Updated</small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="p-4 bg-light rounded text-center">
+                                <h2 class="fw-bold text-danger mb-0">{{ error_count }}</h2>
+                                <small class="text-muted text-uppercase">Errors</small>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if errors %}
+                    <div class="mb-5">
+                        <h5 class="fw-bold text-danger mb-3">Error Details:</h5>
+                        <div class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                            <ul class="mb-0 small">
+                                {% for error in errors %}
+                                <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <div class="text-center">
+                        <a href="{% url 'targets:target_list' %}" class="btn btn-primary px-5 py-2">Back to Targets</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

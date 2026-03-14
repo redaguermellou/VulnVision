@@ -1,0 +1,28 @@
+# Django
+*.pyc
+__pycache__/
+db.sqlite3
+media/
+staticfiles/
+.env
+
+# Virtual Environment
+venv/
+.venv/
+env/
+
+# IDE and System Files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+
+# Antigravity/Agent Files
+.gemini/
+.agents/
+.agent/
+_agents/
+_agent/
+tmp/
+artifacts/
+brain/

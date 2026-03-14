@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Register - VulnVision{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm border-0 mt-4">
+            <div class="card-body p-5">
+                <h3 class="text-center mb-4 fw-bold">Create Account</h3>
+                <form method="post">
+                    {% csrf_token %}
+                    {{ form|crispy }}
+                    <div class="d-grid gap-2 mt-4">
+                        <button type="submit" class="btn btn-success py-2">Sign Up</button>
+                    </div>
+                </form>
+                <div class="mt-4 text-center">
+                    <p class="text-muted small">Already have an account? <a href="{% url 'login' %}" class="text-primary text-decoration-none">Login here</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

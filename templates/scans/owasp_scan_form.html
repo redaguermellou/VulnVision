@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% load crispy_forms_tags %}
+
+{% block title %}Start OWASP Scan - VulnVision{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-header bg-primary text-white p-4 rounded-top-4">
+                    <h4 class="fw-bold mb-0">Launch OWASP Top 10 Scan</h4>
+                    <p class="text-white-50 small mb-0 mt-1">Full automated web assessment using ZAP Active Scanning</p>
+                </div>
+                <div class="card-body p-4">
+                    <div class="alert alert-info border-0 rounded-3 mb-4 small">
+                        <i class="fas fa-info-circle me-2"></i> This scan includes spidering and active vulnerability tests. It may take several minutes depending on the size of the target application.
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        {{ form|crispy }}
+                        
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg rounded-pill p-3 fw-bold">
+                                <i class="fas fa-rocket me-2"></i>Initialize Deep Scan
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="mt-4 text-center">
+                <a href="{% url 'scans:owasp_scan_list' %}" class="btn btn-link link-secondary text-decoration-none small">
+                    <i class="fas fa-arrow-left me-1"></i> Back to OWASP Dashboard
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,112 @@
+{% extends "base.html" %}
+
+{% block title %}Security Trends - VulnVision{% endblock %}
+
+{% block extra_css %}
+<style>
+    .trend-card {
+        border-radius: 12px;
+        border: none;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        background: #fff;
+        margin-bottom: 2rem;
+    }
+    .chart-header {
+        padding: 1.5rem 1.5rem 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-0">Performance Trends</h2>
+            <p class="text-muted small mb-0">Analyze security performance over time</p>
+        </div>
+        <div>
+            <a href="{% url 'scans:report_builder' %}" class="btn btn-primary rounded-pill px-4">
+                <i class="fas fa-file-export me-2"></i>Generate Report
+            </a>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- MoM Findings -->
+        <div class="col-md-12">
+            <div class="trend-card">
+                <div class="chart-header">
+                    <h6 class="fw-bold mb-0">Total Findings (Month-over-Month)</h6>
+                </div>
+                <div class="card-body p-4">
+                    <canvas id="momChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- TTR Trend -->
+        <div class="col-md-12">
+            <div class="trend-card">
+                <div class="chart-header">
+                    <h6 class="fw-bold mb-0">Average Time to Remediate (Hours)</h6>
+                </div>
+                <div class="card-body p-4">
+                    <canvas id="ttrChart" height="100"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    // MoM Chart
+    new Chart(document.getElementById('momChart'), {
+        type: 'line',
+        data: {
+            labels: {{ chart_mom_labels|safe }},
+            datasets: [{
+                label: 'New Findings',
+                data: {{ chart_mom_data|safe }},
+                borderColor: '#4e73df',
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, grid: { borderDash: [2] } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // TTR Chart
+    new Chart(document.getElementById('ttrChart'), {
+        type: 'bar',
+        data: {
+            labels: {{ chart_ttr_labels|safe }},
+            datasets: [{
+                label: 'Avg Hours',
+                data: {{ chart_ttr_data|safe }},
+                backgroundColor: '#1cc88a',
+                borderRadius: 5
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, title: { display: true, text: 'Hours' } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+</script>
+{% endblock %}

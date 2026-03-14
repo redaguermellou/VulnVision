@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics Dashboard - VulnVision{% endblock %}
+
+{% block extra_css %}
+<style>
+    .stat-card {
+        transition: transform 0.2s;
+        border: none;
+        border-radius: 15px;
+    }
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    .chart-box {
+        background: white;
+        border-radius: 15px;
+        padding: 20px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+        height: 100%;
+    }
+    .trend-up { color: #28a745; }
+    .trend-down { color: #dc3545; }
+    .bg-gradient-primary { background: linear-gradient(45deg, #4e73df, #224abe); color: white; }
+    .bg-gradient-success { background: linear-gradient(45deg, #1cc88a, #13855c); color: white; }
+    .bg-gradient-warning { background: linear-gradient(45deg, #f6c23e, #dda20a); color: white; }
+    .bg-gradient-danger { background: linear-gradient(45deg, #e74a3b, #be2617); color: white; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="fw-bold mb-0">Analytics Dashboard</h2>
+        <button onclick="location.reload()" class="btn btn-outline-primary rounded-pill px-4">
+            <i class="fas fa-sync-alt me-2"></i>Refresh Data
+        </button>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card stat-card shadow-sm h-100 p-3 bg-gradient-primary">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="small fw-bold opacity-75">TOTAL SCANS</span>
+                    <i class="fas fa-search"></i>
+                </div>
+                <div class="h2 fw-bold mb-2">{{ total_scans }}</div>
+                <div class="small">
+                    {% if scan_change >= 0 %}
+                        <i class="fas fa-arrow-up me-1"></i> <span class="fw-bold">{{ scan_change }}</span> increase from last month
+                    {% else %}
+                        <i class="fas fa-arrow-down me-1"></i> <span class="fw-bold">{{ abs_scan_change }}</span> decrease from last month
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card shadow-sm h-100 p-3 bg-gradient-danger">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="small fw-bold opacity-75">CRITICAL VULNS</span>
+                    <i class="fas fa-biohazard"></i>
+                </div>
+                <div class="h2 fw-bold mb-2">{{ critical_count }}</div>
+                <div class="small fw-bold">{{ severity_data.high }} High severity issues</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card shadow-sm h-100 p-3 bg-gradient-success">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="small fw-bold opacity-75">TOTAL FINDINGS</span>
+                    <i class="fas fa-shield-alt"></i>
+                </div>
+                <div class="h2 fw-bold mb-2">{{ total_vulns }}</div>
+                <div class="small fw-bold">Active security findings</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card stat-card shadow-sm h-100 p-3 bg-gradient-warning">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="small fw-bold opacity-75">AVG REMEDIATION</span>
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="h2 fw-bold mb-2 text-dark">{{ avg_remediation }}<span class="h6 mb-0"> hrs</span></div>
+                <div class="small fw-bold text-dark">Time to resolve issues</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 1 -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-8">
+            <div class="chart-box">
+                <h6 class="fw-bold mb-4">Scanning Activity (Last 30 Days)</h6>
+                <canvas id="scansChart" height="120"></canvas>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="chart-box">
+                <h6 class="fw-bold mb-4">Severity Distribution</h6>
+                <canvas id="severityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Row 2 -->
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="chart-box">
+                <h6 class="fw-bold mb-4">Scan Types Distribution</h6>
+                <canvas id="typeChart"></canvas>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="chart-box">
+                <h6 class="fw-bold mb-4">OWASP Top 10 Coverage</h6>
+                <canvas id="owaspChart" height="120"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    const chartColors = {
+        critical: '#e74a3b',
+        high: '#f6c23e',
+        medium: '#36b9cc',
+        low: '#1cc88a',
+        info: '#858796',
+        primary: '#4e73df'
+    };
+
+    // Scans Over Time - Line Chart
+    new Chart(document.getElementById('scansChart'), {
+        type: 'line',
+        data: {
+            labels: {{ chart_scans_labels|safe }},
+            datasets: [{
+                label: 'Scans',
+                data: {{ chart_scans_data|safe }},
+                borderColor: chartColors.primary,
+                backgroundColor: 'rgba(78, 115, 223, 0.05)',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, grid: { borderDash: [2] } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+
+    // Severity - Bar Chart
+    new Chart(document.getElementById('severityChart'), {
+        type: 'doughnut',
+        data: {
+            labels: {{ chart_severity_labels|safe }},
+            datasets: [{
+                data: {{ chart_severity_data|safe }},
+                backgroundColor: [chartColors.critical, chartColors.high, chartColors.medium, chartColors.low, chartColors.info],
+                hoverOffset: 4
+            }]
+        },
+        options: {
+            cutout: '70%',
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+
+    // Scan Types - Pie Chart
+    new Chart(document.getElementById('typeChart'), {
+        type: 'pie',
+        data: {
+            labels: {{ chart_type_labels|safe }},
+            datasets: [{
+                data: {{ chart_type_data|safe }},
+                backgroundColor: ['#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b', '#858796'],
+            }]
+        },
+        options: {
+            plugins: { legend: { position: 'bottom' } }
+        }
+    });
+
+    // OWASP - Radar Chart
+    new Chart(document.getElementById('owaspChart'), {
+        type: 'radar',
+        data: {
+            labels: {{ chart_owasp_labels|safe }},
+            datasets: [{
+                label: 'Vulnerabilities',
+                data: {{ chart_owasp_data|safe }},
+                backgroundColor: 'rgba(231, 74, 59, 0.2)',
+                borderColor: '#e74a3b',
+                pointBackgroundColor: '#e74a3b',
+            }]
+        },
+        options: {
+            maintainAspectRatio: false,
+            scales: {
+                r: {
+                    angleLines: { display: true },
+                    suggestedMin: 0
+                }
+            }
+        }
+    });
+</script>
+{% endblock %}

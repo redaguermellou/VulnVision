@@ -1,0 +1,342 @@
+{% extends "base.html" %}
+
+{% block title %}Scan Details - VulnVision{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{% url 'scans:scan_list' %}">Scans</a></li>
+                    <li class="breadcrumb-item active">{{ scan.name }}</li>
+                </ol>
+            </nav>
+            <h2 class="fw-bold mb-0">{{ scan.name }}</h2>
+            <div class="d-flex align-items-center gap-2 mt-1">
+                <span class="badge border bg-light text-dark">{{ scan.get_scan_type_display }}</span>
+                <span class="text-muted small">Target: <strong>{{ scan.target.name }}</strong> ({{ scan.target.url }})</span>
+            </div>
+        </div>
+        
+        <div class="d-flex gap-2">
+            {% if scan.status == 'running' %}
+            <form action="{% url 'scans:scan_stop' scan.pk %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning"><i class="fas fa-stop me-2"></i>Stop Scan</button>
+            </form>
+            {% elif scan.status != 'completed' %}
+            <form action="{% url 'scans:scan_run' scan.pk %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-primary"><i class="fas fa-play me-2"></i>Run Scan</button>
+            </form>
+            {% endif %}
+            <a href="{% url 'scans:scan_delete' scan.pk %}" class="btn btn-outline-danger"><i class="fas fa-trash me-2"></i>Delete</a>
+        </div>
+    </div>
+
+    <!-- Status & Counters -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-4 h-100 text-center">
+                <div class="text-muted small text-uppercase fw-bold mb-2">Scan Status</div>
+                <div id="scan-status-text" class="h4 fw-bold mb-0">
+                    {% if scan.status == 'completed' %}
+                        <span class="text-success"><i class="fas fa-check-circle me-1"></i>Completed</span>
+                    {% elif scan.status == 'running' %}
+                        <span class="text-primary"><i class="fas fa-spinner fa-spin me-1"></i>Running...</span>
+                    {% elif scan.status == 'failed' %}
+                        <span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Failed</span>
+                    {% else %}
+                        <span class="text-warning"><i class="fas fa-clock me-1"></i>{{ scan.status|title }}</span>
+                    {% endif %}
+                </div>
+                <div id="scan-phase-text" class="small text-muted mt-1 italic">{{ scan.current_phase|default:"" }}</div>
+                
+                <div id="progress-container" class="progress mt-3" style="height: 8px; {% if scan.status != 'running' %}display: none;{% endif %}">
+                    <div id="scan-progress-bar" 
+                         class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" 
+                         style="width: {{ scan.progress|default:0 }}%;" 
+                         aria-valuenow="{{ scan.progress|default:0 }}" 
+                         aria-valuemin="0" 
+                         aria-valuemax="100"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-0 bg-danger text-white shadow-sm p-3 h-100 text-center">
+                <div class="small fw-bold mb-1">CRITICAL</div>
+                <div class="h2 fw-bold mb-0" id="count-critical">{{ scan.critical_count }}</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-0 bg-warning text-dark shadow-sm p-3 h-100 text-center">
+                <div class="small fw-bold mb-1">HIGH</div>
+                <div class="h2 fw-bold mb-0" id="count-high">{{ scan.high_count }}</div>
+            </div>
+        </div>
+        <div class="col-md-2">
+            <div class="card border-0 bg-info text-white shadow-sm p-3 h-100 text-center">
+                <div class="small fw-bold mb-1">MEDIUM</div>
+                <div class="h2 fw-bold mb-0" id="count-medium">{{ scan.medium_count }}</div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm p-4 h-100 text-center">
+                <div class="text-muted small text-uppercase fw-bold mb-2">Findings</div>
+                <div class="h4 fw-bold mb-0 text-dark" id="count-total">{{ scan.total_vulnerabilities }}</div>
+                <div class="mt-2 small text-muted">Scan Type: {{ scan.get_scan_type_display }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Results Tabs -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white border-bottom-0 pt-3">
+            <ul class="nav nav-tabs card-header-tabs">
+                <li class="nav-item">
+                    <button class="nav-link active fw-bold" data-bs-toggle="tab" data-bs-target="#summary">Summary</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link fw-bold text-danger" data-bs-toggle="tab" data-bs-target="#vulns">Vulnerabilities</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link fw-bold" data-bs-toggle="tab" data-bs-target="#raw">Raw Output</button>
+                </li>
+            </ul>
+        </div>
+        <div class="card-body p-4">
+            <div class="tab-content">
+                <!-- Summary Tab -->
+                <div class="tab-pane fade show active" id="summary">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold mb-3">Scan Configuration</h6>
+                            <pre class="bg-light p-3 rounded border small"><code>{{ scan.config|default:"{}" }}</code></pre>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-bold mb-3">Target Info</h6>
+                            <ul class="list-group list-group-flush">
+                                <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 px-0">
+                                    <span class="text-muted">Target Name:</span>
+                                    <span class="fw-bold">{{ scan.target.name }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 px-0">
+                                    <span class="text-muted">Protocol:</span>
+                                    <span class="badge bg-secondary">{{ scan.target.protocol|upper }}</span>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 px-0">
+                                    <span class="text-muted">URL:</span>
+                                    <code>{{ scan.target.url }}</code>
+                                </li>
+                                <li class="list-group-item d-flex justify-content-between align-items-center bg-transparent border-0 px-0">
+                                    <span class="text-muted">IP Target:</span>
+                                    <code>{{ scan.target.ip_address|default:"Auto-discover" }}</code>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Vulns Tab -->
+                <div class="tab-pane fade p-3" id="vulns">
+                    {% if scan.vulnerabilities.exists %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Severity</th>
+                                        <th>Vulnerability</th>
+                                        <th>Component</th>
+                                        <th>CVE</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for vuln in scan.vulnerabilities.all %}
+                                        <tr>
+                                            <td>
+                                                {% if vuln.severity == 'critical' %}
+                                                    <span class="badge bg-danger">Critical</span>
+                                                {% elif vuln.severity == 'high' %}
+                                                    <span class="badge bg-warning text-dark">High</span>
+                                                {% elif vuln.severity == 'medium' %}
+                                                    <span class="badge bg-info text-white">Medium</span>
+                                                {% elif vuln.severity == 'low' %}
+                                                    <span class="badge bg-secondary">Low</span>
+                                                {% else %}
+                                                    <span class="badge bg-light text-dark">Info</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <div class="fw-bold">{{ vuln.title }}</div>
+                                                <div class="small text-muted">{{ vuln.description|truncatechars:100 }}</div>
+                                            </td>
+                                            <td><code>{{ vuln.component|default:"N/A" }}</code></td>
+                                            <td>{{ vuln.cve_id|default:"-" }}</td>
+                                            <td>
+                                                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#vulnModal{{ vuln.id }}">
+                                                    View
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- Modal for each vulnerability -->
+                                        <div class="modal fade" id="vulnModal{{ vuln.id }}" tabindex="-1">
+                                            <div class="modal-dialog modal-lg">
+                                                <div class="modal-content">
+                                                    <div class="modal-header">
+                                                        <h5 class="modal-title fw-bold">Finding: {{ vuln.title }}</h5>
+                                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                    </div>
+                                                    <div class="modal-body">
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-3 text-muted">Severity:</div>
+                                                            <div class="col-md-9 fw-bold text-uppercase">{{ vuln.severity }}</div>
+                                                        </div>
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-3 text-muted">Component:</div>
+                                                            <div class="col-md-9"><code>{{ vuln.component }}</code></div>
+                                                        </div>
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-3 text-muted">Description:</div>
+                                                            <div class="col-md-9">{{ vuln.description|linebreaks }}</div>
+                                                        </div>
+                                                        {% if vuln.evidence %}
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-3 text-muted">Evidence:</div>
+                                                            <div class="col-md-9">
+                                                                <pre class="bg-light p-2 rounded small"><code>{{ vuln.evidence }}</code></pre>
+                                                            </div>
+                                                        </div>
+                                                        {% endif %}
+                                                        {% if vuln.remediation %}
+                                                        <div class="row mb-3">
+                                                            <div class="col-md-3 text-muted">Remediation:</div>
+                                                            <div class="col-md-9 text-success">{{ vuln.remediation|linebreaks }}</div>
+                                                        </div>
+                                                        {% endif %}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="py-5 text-center">
+                            <div class="mb-4">
+                                <i class="fas fa-shield-virus fa-4x text-muted opacity-25"></i>
+                            </div>
+                            {% if scan.status == 'completed' %}
+                                <h5 class="text-success fw-bold">No High-Risk Vulnerabilities Found!</h5>
+                                <p class="text-muted">This target appears to be following security best practices for the applied scan type.</p>
+                            {% elif scan.status == 'running' or scan.status == 'pending' %}
+                                <h5>Analysis in progress...</h5>
+                                <p class="text-muted">Vulnerabilities will appear here as they are discovered by the engine.</p>
+                            {% else %}
+                                <h5>No vulnerability data available.</h5>
+                                <p class="text-muted">The scan may have failed or was stopped early before findings could be recorded.</p>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Raw Tab -->
+                <div class="tab-pane fade" id="raw">
+                    <div class="bg-dark text-light p-4 rounded shadow-sm overflow-auto" style="max-height: 500px; font-family: 'Courier New', Courier, monospace;">
+                        <div class="mb-2 text-warning fw-bold">[SYSTEM] Log capture started at {{ scan.created_at|date:"c" }}</div>
+                        <div class="mb-1 text-info">> Initializing engine: {{ scan.scan_type }}</div>
+                        <div class="mb-1 text-info">> Connecting to target: {{ scan.target.url }}</div>
+                        {% if scan.status == 'completed' %}
+                            <div class="mb-1 text-success">> Scan loop finished successfully.</div>
+                            <div class="mb-1 text-success">> Results exported to JSON/XML.</div>
+                        {% elif scan.status == 'failed' %}
+                            <div class="mb-1 text-danger">> FATAL: Connection reset by remote host.</div>
+                        {% elif scan.status == 'running' %}
+                            <div class="mb-1 text-muted animate__animated animate__flash animate__infinite">> Probing network segments... [BUSY]</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const statusUrl = "{% url 'scans:scan_status' scan.id %}";
+    let pollInterval;
+    let failCount = 0;
+
+    function updateStatus() {
+        fetch(statusUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok');
+                return response.json();
+            })
+            .then(data => {
+                failCount = 0;
+                
+                // Update Status Text and Badge
+                const statusText = document.getElementById('scan-status-text');
+                const phaseText = document.getElementById('scan-phase-text');
+                const progressContainer = document.getElementById('progress-container');
+                const progressBar = document.getElementById('scan-progress-bar');
+                
+                if (data.status === 'completed') {
+                    statusText.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>Completed</span>';
+                    phaseText.innerText = 'Finished';
+                    if (progressContainer) progressContainer.style.display = 'none';
+                    clearInterval(pollInterval);
+                    setTimeout(() => location.reload(), 1500);
+                    return;
+                } else if (data.status === 'failed') {
+                    statusText.innerHTML = '<span class="text-danger"><i class="fas fa-exclamation-triangle me-1"></i>Failed</span>';
+                    phaseText.innerText = data.phase || 'Error occurred';
+                    if (progressContainer) progressContainer.style.display = 'none';
+                    clearInterval(pollInterval);
+                    return;
+                } else if (data.status === 'running') {
+                    statusText.innerHTML = '<span class="text-primary"><i class="fas fa-spinner fa-spin me-1"></i>Running...</span>';
+                }
+                
+                // Update Progress
+                if (progressContainer) progressContainer.style.display = 'flex';
+                if (progressBar) {
+                    progressBar.style.width = data.progress + '%';
+                    progressBar.setAttribute('aria-valuenow', data.progress);
+                }
+                if (phaseText) phaseText.innerText = data.phase || 'Scanning...';
+
+                // Update Counters
+                document.getElementById('count-critical').innerText = data.critical;
+                document.getElementById('count-high').innerText = data.high;
+                document.getElementById('count-medium').innerText = data.medium;
+                document.getElementById('count-total').innerText = data.total;
+            })
+            .catch(err => {
+                console.error('Polling error:', err);
+                failCount++;
+                if (failCount > 10) {
+                    clearInterval(pollInterval);
+                    console.error('Too many polling failures. Stopped.');
+                }
+            });
+    }
+
+    const currentStatus = "{{ scan.status }}";
+    if (currentStatus === 'running' || currentStatus === 'pending') {
+        // Initial call
+        updateStatus();
+        // Poll every 2 seconds
+        pollInterval = setInterval(updateStatus, 2000);
+    }
+});
+</script>
+{% endblock %}

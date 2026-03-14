@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Target - VulnVision{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center py-5">
+    <div class="col-md-5">
+        <div class="card border-0 shadow-lg mt-5">
+            <div class="card-body p-5 text-center">
+                <div class="mb-4">
+                    <i class="fas fa-exclamation-triangle fa-5x text-danger animate__animated animate__pulse animate__infinite"></i>
+                </div>
+                <h3 class="fw-bold text-dark">Confirm Deletion</h3>
+                <p class="text-muted mt-3 mb-4">
+                    Are you sure you want to permanently delete <strong class="text-dark">{{ target.name }}</strong>?<br>
+                    This action <span class="text-danger fw-bold">cannot be undone</span> and will delete all associated scan history and reports.
+                </p>
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-danger py-2 fw-bold shadow-sm">
+                            <i class="fas fa-trash-alt me-2"></i>Yes, Delete Permanently
+                        </button>
+                        <a href="{% url 'targets:target_list' %}" class="btn btn-light py-2">
+                            Cancel and Go Back
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
