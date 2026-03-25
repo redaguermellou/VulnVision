@@ -140,7 +140,7 @@
                         </div>
                     </div>
                     
-                    {% for message in messages %}
+                    {% for message in chat_messages %}
                     <div class="message-container {{ message.role }} mb-4 {% if message.role == 'user' %}d-flex justify-content-end{% endif %}">
                         <div class="message-bubble">
                             <div class="markdown-content">
@@ -223,17 +223,17 @@ document.addEventListener('DOMContentLoaded', function() {
     function appendMessage(role, content, isHtml = false) {
         const time = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         const container = document.createElement('div');
-        container.className = `message-container ${role} mb-3 ${role === 'user' ? 'd-flex justify-content-end' : ''}`;
-        
-        const alignmentClass = role === 'user' ? 'bg-primary' : 'bg-secondary';
-        const textAlignment = role === 'user' ? 'text-end text-white-50' : '';
+        // Match the django template structure exactly
+        container.className = `message-container ${role} mb-4 ${role === 'user' ? 'd-flex justify-content-end' : ''}`;
         
         container.innerHTML = `
-            <div class="message-bubble ${alignmentClass} text-white p-3 rounded shadow-sm" style="max-width: 85%;">
+            <div class="message-bubble">
                 <div class="markdown-content">
                     ${isHtml ? content : content.replace(/\n/g, '<br>')}
                 </div>
-                <small class="text-white-50 d-block mt-1 ${textAlignment}">${time}</small>
+                <small class="text-white-50 d-block mt-2 font-monospace" style="font-size: 0.7rem;">
+                    ${time}
+                </small>
             </div>
         `;
         

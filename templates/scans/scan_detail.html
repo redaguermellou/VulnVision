@@ -306,19 +306,22 @@
                 <!-- Raw Tab -->
                 <div class="tab-pane fade" id="raw">
                     <div class="m-0 p-4 rounded-bottom shadow-inner overflow-auto" style="background:#020617; max-height: 600px; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 0.9rem;">
-                        <div class="mb-2 text-warning fw-bold"><span class="text-white-50">$</span> [SYSTEM] Log capture started at {{ scan.created_at|date:"c" }}</div>
-                        <div class="mb-2 text-info"><span class="text-white-50">$</span> [INIT] Initializing engine module: <span class="text-white fw-bold">{{ scan.scan_type }}</span></div>
-                        <div class="mb-2 text-info"><span class="text-white-50">$</span> [CONN] Establishing connection to target: <span class="text-white text-decoration-underline">{{ scan.target.url }}</span></div>
-                        {% if scan.status == 'completed' %}
-                            <div class="mb-2 text-success"><span class="text-white-50">$</span> [DONE] Scan loop finished successfully. Exit code 0.</div>
-                            <div class="mb-2 text-success"><span class="text-white-50">$</span> [EXPORT] Results parsed and committed to database.</div>
-                        {% elif scan.status == 'failed' %}
-                            <div class="mb-2 text-danger"><span class="text-white-50">$</span> [FATAL] Connection reset by remote host or engine timeout.</div>
-                            <div class="mb-2 text-danger"><span class="text-white-50">$</span> [ERROR] Exit code 1. Process terminated.</div>
-                        {% elif scan.status == 'running' %}
-                            <div class="mb-2 text-white-50 animate__animated animate__flash animate__infinite"><span class="text-white-50">$</span> [BUSY] Probing network segments & executing payload scripts...</div>
+                        {% if scan.config.raw_output %}
+                            <pre class="text-white-50 m-0" style="white-space: pre-wrap;">{{ scan.config.raw_output }}</pre>
+                        {% else %}
+                            <div class="mb-2 text-warning fw-bold"><span class="text-white-50">$</span> [SYSTEM] Log capture started at {{ scan.created_at|date:"c" }}</div>
+                            <div class="mb-2 text-info"><span class="text-white-50">$</span> [INIT] Initializing engine module: <span class="text-white fw-bold">{{ scan.scan_type }}</span></div>
+                            <div class="mb-2 text-info"><span class="text-white-50">$</span> [CONN] Establishing connection to target: <span class="text-white text-decoration-underline">{{ scan.target.url }}</span></div>
+                            {% if scan.status == 'completed' %}
+                                <div class="mb-2 text-success"><span class="text-white-50">$</span> [DONE] Scan loop finished successfully. Exit code 0.</div>
+                                <div class="mb-2 text-success"><span class="text-white-50">$</span> [EXPORT] Results parsed and committed to database.</div>
+                            {% elif scan.status == 'failed' %}
+                                <div class="mb-2 text-danger"><span class="text-white-50">$</span> [FATAL] Engine failure or target unreachable.</div>
+                            {% elif scan.status == 'running' %}
+                                <div class="mb-2 text-white-50 animate__animated animate__flash animate__infinite"><span class="text-white-50">$</span> [BUSY] Probing network segments & executing payload scripts...</div>
+                            {% endif %}
+                            <div class="animated-cursor d-inline-block mt-2" style="width: 10px; height: 1.2em; background: #fff; animation: blink 1s step-end infinite;"></div>
                         {% endif %}
-                        <div class="animated-cursor d-inline-block mt-2" style="width: 10px; height: 1.2em; background: #fff; animation: blink 1s step-end infinite;"></div>
                     </div>
                 </div>
             </div>

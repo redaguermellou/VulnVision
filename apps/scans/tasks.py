@@ -4,6 +4,7 @@ from .models import Scan, Vulnerability
 from .utils.nmap_scanner import NmapScanner
 from .utils.nikto_scanner import NiktoScanner
 from .utils.gobuster_scanner import GobusterScanner
+from .utils.zap_scanner import ZAPScanner
 import logging
 import traceback
 
@@ -56,6 +57,15 @@ def run_scan_task(self, scan_id):
             if result.get('status') == 'success':
                 _process_gobuster_findings(scan, result['parsed_data'])
                 
+        elif scan.scan_type == 'zap':
+            scanner = ZAPScanner()
+            alerts = scanner.run_full_scan(target_url, progress_callback=update_progress)
+            if isinstance(alerts, dict) and 'error' in alerts:
+                result = {'status': 'error', 'message': alerts['error']}
+            else:
+                result = {'status': 'success', 'parsed_data': alerts}
+                _process_zap_findings(scan, alerts)
+                
         else: # Default to Nmap
             scanner = NmapScanner()
             result = scanner.run_scan(target_url, scan_type=scan.scan_type, extra_args=scan.config, progress_callback=update_progress)
@@ -64,6 +74,9 @@ def run_scan_task(self, scan_id):
 
         # Finalize scan
         scan.refresh_from_db()
+        if result:
+            scan.config['raw_output'] = result.get('raw_output') or result.get('raw_data', '')
+
         if result and result.get('status') == 'success':
             scan.status = 'completed'
             scan.progress = 100
@@ -147,6 +160,27 @@ def _process_gobuster_findings(scan, data):
             component=item.get('path'),
             evidence=f"HTTP {item.get('status')} response received for path.",
             remediation=remediation
+        )
+
+def _process_zap_findings(scan, data):
+    """Converts ZAP parsed data into Vulnerability objects"""
+    if not data: return
+    for item in data:
+        cwe_id = item.get('cweid', '')
+        severity_map = {'High': 'high', 'Medium': 'medium', 'Low': 'low', 'Informational': 'info'}
+        zap_risk = item.get('risk', 'Informational')
+        severity = severity_map.get(zap_risk, 'info')
+        
+        Vulnerability.objects.create(
+            scan=scan,
+            target=scan.target,
+            title=f"ZAP: {item.get('alert', 'Unknown Finding')}",
+            description=item.get('description', ''),
+            severity=severity,
+            component=item.get('url', ''),
+            evidence=item.get('evidence', ''),
+            remediation=item.get('solution', ''),
+            cwe_id=cwe_id,
         )
 
 @shared_task

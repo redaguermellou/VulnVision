@@ -3,6 +3,8 @@ import json
 import logging
 import os
 import tempfile
+import csv
+import io
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -17,8 +19,8 @@ class NiktoScanner:
         Target should be a URL or IP.
         """
         config = config or {}
-        # -h: host, -Format json: output format, -o -: output to stdout
-        args = ['-h', target, '-Format', 'json', '-o', '-']
+        # -h: host, -Format csv: output format, -o -: output to stdout
+        args = ['-h', target, '-Format', 'csv', '-o', '-']
         
         # Tuning
         tuning = config.get('tuning')
@@ -84,52 +86,60 @@ class NiktoScanner:
                     'raw_output': stdout
                 }
             
-            json_start = stdout.find('{')
-            if json_start != -1:
-                json_data = stdout[json_start:]
-                return {
-                    'status': 'success',
-                    'raw_data': stdout,
-                    'parsed_data': self.parse_json(json_data)
-                }
-            else:
-                return {
-                    'status': 'error',
-                    'message': "Could not find JSON output in Nikto results.",
-                    'raw_output': stdout
-                }
+            # Nikto output might contain a banner, so we parse the whole stdout as CSV
+            return {
+                'status': 'success',
+                'raw_data': stdout,
+                'parsed_data': self.parse_csv(stdout)
+            }
         except Exception as e:
             return {'status': 'error', 'message': str(e)}
 
-    def parse_json(self, json_content):
-        """Parses Nikto JSON output"""
+    def parse_csv(self, csv_content):
+        """Parses Nikto CSV output"""
         try:
-            data = json.loads(json_content)
             results = {
                 'info': {
-                    'host': data.get('host'),
-                    'ip': data.get('ip'),
-                    'port': data.get('port'),
-                    'banner': data.get('banner'),
-                    'nikto_version': data.get('version')
+                    'host': '',
+                    'ip': '',
+                    'port': '',
+                    'banner': '',
+                    'nikto_version': ''
                 },
                 'vulnerabilities': []
             }
             
-            for item in data.get('vulnerabilities', []):
+            reader = csv.reader(io.StringIO(csv_content))
+            for row in reader:
+                if len(row) < 7:
+                    continue
+                # Expected Nikto CSV format typically:
+                # ["hostname","ip","port","osvdb","method","URI","message"]
+                hostname, ip, port, osvdb, method, url, msg = row[:7]
+                
+                # Assign to info (just take the first valid row's info)
+                if not results['info']['host']:
+                    results['info']['host'] = hostname
+                    results['info']['ip'] = ip
+                    results['info']['port'] = port
+
+                # Basic validation
+                if hostname.lower() == 'hostname' or ip.lower() == 'ip':
+                    continue
+                
                 vuln = {
-                    'id': item.get('id'),
-                    'osvdb': item.get('osvdb'),
-                    'method': item.get('method'),
-                    'url': item.get('url'),
-                    'message': item.get('msg'),
-                    'severity': self._map_severity(item.get('msg', ''))
+                    'id': osvdb,
+                    'osvdb': osvdb,
+                    'method': method,
+                    'url': url,
+                    'message': msg,
+                    'severity': self._map_severity(msg)
                 }
                 results['vulnerabilities'].append(vuln)
                 
             return results
         except Exception as e:
-            logger.error(f"Failed to parse Nikto JSON: {e}")
+            logger.error(f"Failed to parse Nikto CSV: {e}")
             return None
 
     def _map_severity(self, message):
@@ -144,31 +154,9 @@ class NiktoScanner:
 
 # Example Mock Output for testing
 if __name__ == "__main__":
-    mock_json = """
-    {
-        "host": "localhost",
-        "ip": "127.0.0.1",
-        "port": "80",
-        "banner": "Apache/2.4.41 (Ubuntu)",
-        "version": "2.1.6",
-        "vulnerabilities": [
-            {
-                "id": "1",
-                "osvdb": "0",
-                "method": "GET",
-                "url": "/login.php",
-                "msg": "The site appears to be vulnerable to XSS."
-            },
-            {
-                "id": "2",
-                "osvdb": "12345",
-                "method": "POST",
-                "url": "/admin",
-                "msg": "Sensitive informational disclosure in headers."
-            }
-        ]
-    }
-    """
+    mock_csv = '''"localhost","127.0.0.1","80","0","GET","/login.php","The site appears to be vulnerable to XSS."
+"Nikto - v2.1.5/2.1.5"
+"localhost","127.0.0.1","80","12345","POST","/admin","Sensitive informational disclosure in headers."'''
     scanner = NiktoScanner()
-    parsed = scanner.parse_json(mock_json)
+    parsed = scanner.parse_csv(mock_csv)
     print(json.dumps(parsed, indent=2))

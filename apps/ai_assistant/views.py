@@ -81,8 +81,8 @@ class AIAssistantView(LoginRequiredMixin, View):
             'session': session,
             'target': target,
             'scan': scan,
-            'messages': session.messages.all(),
         }
+        context['chat_messages'] = session.messages.all()
         return render(request, 'ai/chat.html', context)
 
 class ChatMessageView(LoginRequiredMixin, View):
@@ -193,7 +193,7 @@ class ExportChatPdfView(LoginRequiredMixin, View):
         
         context = {
             'session': session,
-            'messages': session.messages.all(),
+            'chat_messages': session.messages.all(),
         }
         return render(request, 'ai/chat_export.html', context)
 

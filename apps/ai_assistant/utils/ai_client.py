@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 class AIClient:
     def __init__(self):
         self.api_key = getattr(settings, 'GEMINI_API_KEY', None)
-        self.model_name = getattr(settings, 'GEMMA_MODEL_NAME', 'gemini-2.5-flash')
+        self.model_name = getattr(settings, 'GEMMA_MODEL_NAME', 'gemini-1.5-flash')
 
     def get_response(self, messages, context_text=""):
         if not self.api_key:
@@ -17,7 +17,10 @@ class AIClient:
         contents = []
         for msg in messages[:-1]:
             role = "user" if msg['role'] == 'user' else "model"
-            contents.append({"role": role, "parts": [{"text": msg['content']}]})
+            if contents and contents[-1]['role'] == role:
+                contents[-1]['parts'][0]['text'] += f"\n\n{msg['content']}"
+            else:
+                contents.append({"role": role, "parts": [{"text": msg['content']}]})
             
         system_instruction = f"""
         You are VulnVision AI, a specialized security assistant.
@@ -35,12 +38,15 @@ class AIClient:
         """
         
         current_prompt = f"{system_instruction}\n\nUser Question: {messages[-1]['content']}"
-        contents.append({"role": "user", "parts": [{"text": current_prompt}]})
+        if contents and contents[-1]['role'] == 'user':
+            contents[-1]['parts'][0]['text'] += f"\n\n{current_prompt}"
+        else:
+            contents.append({"role": "user", "parts": [{"text": current_prompt}]})
         
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model_name}:generateContent?key={self.api_key}"
         
         try:
-            response = requests.post(url, json={"contents": contents}, headers={'Content-Type': 'application/json'}, timeout=5)
+            response = requests.post(url, json={"contents": contents}, headers={'Content-Type': 'application/json'}, timeout=30)
             if response.status_code == 200:
                 data = response.json()
                 try:
@@ -65,7 +71,7 @@ class AIClient:
         payload = {"contents": [{"parts": [{"text": prompt}]}]}
         
         try:
-            response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'}, timeout=4)
+            response = requests.post(url, json=payload, headers={'Content-Type': 'application/json'}, timeout=30)
             if response.status_code == 200:
                 text = response.json()['candidates'][0]['content']['parts'][0]['text'].strip()
                 if "```json" in text:

@@ -26,15 +26,27 @@ class GobusterScanner:
         Runs gobuster dir scan and returns findings with real-time progress.
         """
         config = config or {}
-        wordlist_name = config.get('wordlist', 'common.txt')
-        wordlist_path = self._get_wordlist_path(wordlist_name)
         
-        # Build command: gobuster dir -u <url> -w <wordlist>
-        command = [self.binary_path, 'dir', '-u', target_url, '-w', wordlist_path, '--no-error']
+        # Match the path we just created
+        WORDLIST_PATH = "/usr/share/wordlists/common.txt"
+        
+        command = [
+            self.binary_path, "dir",
+            "-u", target_url,
+            "-w", WORDLIST_PATH,
+            "-o", "gobuster_results.txt",
+            "--no-error"
+        ]
         
         # Threading
-        threads = config.get('threads', 10)
+        threads = config.get('threads', 5)
         command.extend(['-t', str(threads)])
+        
+        # Add timeout, retry, and exclude length 0 to avoid wildcard/disconnect errors
+        command.extend(['--timeout', '30s', '--retry', '--exclude-length', '0'])
+        
+        # Add realistic user agent to prevent WAF blocks
+        command.extend(['-a', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'])
         
         # Extensions
         extensions = config.get('extensions')

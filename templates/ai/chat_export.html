@@ -42,9 +42,9 @@
             </div>
         </div>
 
-        <div class="chat-log">
-            {% for message in messages %}
-            <div class="message {% if message.role == 'user' %}user-message{% else %}assistant-message{% endif %}">
+        <div class="chat-container">
+            {% for message in chat_messages %}
+            <div class="message {% if message.role == 'user' %}user{% else %}assistant{% endif %}">
                 <span class="timestamp">{{ message.created_at|date:"H:i:s" }}</span>
                 <div class="role-label text-{{ message.role|yesno:'primary,secondary' }}">
                     {{ message.role }}

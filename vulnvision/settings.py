@@ -14,7 +14,6 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'default-insecure-key-for-dev')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 't')
 
-ALLOWED_HOSTS = []
 
 # Application definition
 INSTALLED_APPS = [
@@ -133,7 +132,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'core.User'
 
 # ── ALLOWED_HOSTS (env configurable) ─────────────────────────
-_hosts = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1')
+_hosts = os.getenv('ALLOWED_HOSTS', '4.232.95.30,localhost,127.0.0.1')
 ALLOWED_HOSTS = [h.strip() for h in _hosts.split(',') if h.strip()]
 CSRF_TRUSTED_ORIGINS = [
     f"https://{h}" for h in ALLOWED_HOSTS if h not in ('localhost', '127.0.0.1')
